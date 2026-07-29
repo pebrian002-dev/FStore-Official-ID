@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Buat Catatan</title>
+    <title>Baca Catatan</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -15,31 +15,25 @@
     </button>
 
     <div class="container">
-        <div class="header">
-            <h1>Bagikan Catatan</h1>
-            <p>Tulis dan dapatkan link untuk membagikannya.</p>
-        </div>
-
-        <div class="form-group">
-            <input type="text" id="title" placeholder="Judul Catatan..." required autocomplete="off">
-        </div>
-        
-        <div class="form-group form-group-textarea">
-            <textarea id="content" placeholder="Ketik isi catatan di sini..." required></textarea>
-        </div>
-        
-        <div class="form-group">
-            <input type="password" id="password" placeholder="Password (Opsional untuk kunci)">
-        </div>
-        
-        <button id="saveBtn" class="primary-btn">Simpan & Dapatkan Link</button>
-
-        <div id="resultBox" class="success-box hidden">
-            <p style="color: var(--success-text); font-weight:600;">✨ Catatan dibuat!</p>
-            <div class="link-wrapper">
-                <input type="text" id="shareLink" readonly>
-                <button id="copyBtn">Salin</button>
+        <!-- Bagian Password -->
+        <div id="passwordSection" class="hidden" style="margin-top: 50px;">
+            <div class="header" style="text-align: center;">
+                <h1 style="font-size: 3rem; margin-bottom: 15px;">🔒</h1>
+                <h1>Catatan Terkunci</h1>
             </div>
+            <div class="form-group">
+                <input type="password" id="viewPassword" placeholder="Masukkan password...">
+            </div>
+            <button id="unlockBtn" class="primary-btn">Buka Catatan</button>
+            <p id="errorMsg" class="error-text"></p>
+        </div>
+
+        <!-- Bagian Isi Catatan -->
+        <div id="noteSection" class="hidden" style="display: flex; flex-direction: column; height: 100%;">
+            <h1 id="noteTitle" class="note-title">Memuat...</h1>
+            <div id="noteContent" class="note-content"></div>
+            
+            <a href="index.html" class="back-link">← Buat Catatan Baru</a>
         </div>
     </div>
 
@@ -54,7 +48,6 @@
             }
         });
     </script>
-    
-    <script type="module" src="app.js"></script>
+    <script type="module" src="view.js"></script>
 </body>
 </html>

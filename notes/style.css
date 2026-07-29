@@ -1,0 +1,150 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+    --primary-color: #4f46e5;
+    --primary-hover: #4338ca;
+    --bg-color: #ffffff;
+    --text-main: #1f2937;
+    --text-muted: #6b7280;
+    --border-color: #e5e7eb;
+    --success-bg: #ecfdf5;
+    --success-text: #065f46;
+    --danger-text: #dc2626;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', sans-serif;
+}
+
+/* Kunci Layar Penuh */
+body {
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    width: 100vw;
+    height: 100dvh; /* Dynamic Viewport: pas dengan layar HP */
+    overflow-x: hidden;
+    display: flex;
+    justify-content: center;
+}
+
+/* Menghilangkan mode 'kartu', container memenuhi layar */
+.container {
+    width: 100%;
+    max-width: 800px;
+    height: 100%;
+    padding: 60px 20px 20px 20px; /* Padding atas lebih besar untuk tombol fullscreen */
+    display: flex;
+    flex-direction: column;
+}
+
+.header {
+    margin-bottom: 20px;
+}
+
+.header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.header p {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+input[type="text"], 
+input[type="password"], 
+textarea {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1rem;
+    background-color: #f9fafb;
+    transition: 0.2s ease;
+}
+
+input:focus, textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    background-color: #fff;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+/* Membuat area ketik otomatis mengisi sisa ruang layar kosong */
+.form-group-textarea {
+    flex: 1; /* Mengisi sisa ruang */
+    display: flex;
+    flex-direction: column;
+}
+
+textarea {
+    flex: 1; 
+    resize: none; /* Hilangkan garis tarik di pojok */
+    min-height: 150px;
+}
+
+button.primary-btn {
+    width: 100%;
+    padding: 16px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.05rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: auto; /* Mendorong tombol ke paling bawah */
+}
+
+button.primary-btn:hover { background-color: var(--primary-hover); }
+button.primary-btn:disabled { background-color: #9ca3af; cursor: not-allowed; }
+
+/* Tombol Fullscreen di Pojok Kanan Atas */
+.fullscreen-btn {
+    position: fixed;
+    top: 15px;
+    right: 15px;
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background-color: #f3f4f6;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: var(--text-main);
+    z-index: 1000;
+    transition: 0.2s;
+}
+
+.fullscreen-btn:hover {
+    background-color: #e5e7eb;
+}
+
+/* Hasil Link & Alert */
+.hidden { display: none !important; }
+.success-box { margin-top: 15px; padding: 15px; background-color: var(--success-bg); border-radius: 8px; text-align: center; }
+.link-wrapper { display: flex; gap: 8px; margin-top: 10px; }
+.link-wrapper input { margin: 0; background: #fff; }
+.link-wrapper button { padding: 0 15px; background: var(--primary-color); color: white; border: none; border-radius: 8px; font-weight: bold; }
+
+/* Tampilan Baca (View) */
+.note-title { font-size: 1.8rem; font-weight: 700; margin-bottom: 15px; }
+.note-content { font-size: 1.05rem; line-height: 1.7; color: #374151; white-space: pre-wrap; flex: 1; overflow-y: auto; padding-bottom: 20px;}
+.error-text { color: var(--danger-text); margin-top: 10px; text-align: center; font-weight: 500; }
+.back-link { display: block; text-align: center; margin-top: 20px; color: var(--text-muted); text-decoration: none; padding: 15px 0;}
