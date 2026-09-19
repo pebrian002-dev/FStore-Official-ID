@@ -4,7 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#09090b">
+  <meta name="description" content="Client-side 2FA authenticator oleh FStore Official">
   <title>Authenticator — FStore Official</title>
+
+  <!-- ============ PWA ============ -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="logo.png">
+  <link rel="icon" type="image/png" href="logo.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Authenticator">
+  <meta name="mobile-web-app-capable" content="yes">
 
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -39,10 +49,8 @@
       overscroll-behavior-y: none;
     }
 
-    /* Cegah zoom otomatis di iOS saat fokus input */
     input, button, summary { font-size: 16px; }
 
-    /* ============ Input ============ */
     .field {
       background: rgba(24, 24, 27, 0.6);
       border: 1px solid var(--border);
@@ -60,7 +68,6 @@
       box-shadow: 0 0 0 3px rgba(239,68,68,0.15);
     }
 
-    /* ============ Card ============ */
     .card {
       background: linear-gradient(180deg, rgba(24,24,27,0.75) 0%, rgba(9,9,11,0.6) 100%);
       backdrop-filter: blur(16px);
@@ -71,19 +78,16 @@
         0 20px 40px -20px rgba(0,0,0,0.8);
     }
 
-    /* ============ Ring animation ============ */
     #progress-ring {
       transition: stroke-dashoffset 0.5s linear, stroke 0.3s ease;
     }
 
-    /* ============ Code text ============ */
     #code {
       transition: opacity .18s ease, transform .18s ease, color .3s ease;
       font-variant-numeric: tabular-nums;
       letter-spacing: 0.08em;
     }
 
-    /* ============ Toast ============ */
     @keyframes toastIn {
       from { transform: translateY(-12px) scale(0.96); opacity: 0; }
       to   { transform: translateY(0) scale(1); opacity: 1; }
@@ -95,14 +99,10 @@
     .toast-enter { animation: toastIn .28s cubic-bezier(0.34,1.56,0.64,1) forwards; }
     .toast-exit  { animation: toastOut .22s ease forwards; }
 
-    /* ============ Menu ============ */
     #menu-overlay { pointer-events: none; }
     #menu-overlay[data-open="true"] { pointer-events: auto; }
 
-    #menu-backdrop {
-      opacity: 0;
-      transition: opacity .25s ease;
-    }
+    #menu-backdrop { opacity: 0; transition: opacity .25s ease; }
     #menu-overlay[data-open="true"] #menu-backdrop { opacity: 1; }
 
     #menu-panel {
@@ -116,7 +116,6 @@
       opacity: 1;
     }
 
-    /* Desktop: panel jadi dropdown, bukan bottom sheet */
     @media (min-width: 640px) {
       #menu-panel {
         transform: translateY(-6px) scale(0.98);
@@ -127,11 +126,9 @@
       }
     }
 
-    /* ============ Details marker hide ============ */
     summary { list-style: none; }
     summary::-webkit-details-marker { display: none; }
 
-    /* Reduced motion */
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
         animation-duration: .01ms !important;
@@ -139,8 +136,15 @@
       }
     }
 
-    /* Ring rotation wrapper supaya start dari atas */
     .ring-rotate { transform: rotate(-90deg); transform-origin: center; }
+
+    /* Install banner: slide up dari bawah */
+    @keyframes slideUpBanner {
+      from { transform: translateY(120%); opacity: 0; }
+      to   { transform: translateY(0); opacity: 1; }
+    }
+    #install-banner.show { animation: slideUpBanner .35s cubic-bezier(.32,.72,0,1) forwards; }
+    #install-banner.hide { transition: transform .25s ease, opacity .25s ease; transform: translateY(120%); opacity: 0; }
   </style>
 </head>
 
@@ -172,8 +176,6 @@
 
     <!-- ============ CODE CARD ============ -->
     <section class="card rounded-3xl p-6 relative overflow-hidden">
-
-      <!-- Copy feedback overlay -->
       <div id="copy-feedback"
            class="absolute inset-0 z-20 rounded-3xl flex items-center justify-center bg-zinc-950/85 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200">
         <div class="flex flex-col items-center gap-2">
@@ -186,13 +188,8 @@
         </div>
       </div>
 
-      <!-- Code + Ring -->
-      <button type="button" onclick="copyCode()"
-              class="block w-full group"
-              aria-label="Salin kode 6 digit">
+      <button type="button" onclick="copyCode()" class="block w-full group" aria-label="Salin kode 6 digit">
         <div class="relative w-56 h-56 sm:w-64 sm:h-64 mx-auto">
-
-          <!-- SVG Ring -->
           <svg class="w-full h-full ring-rotate" viewBox="0 0 100 100" fill="none">
             <circle cx="50" cy="50" r="46" stroke-width="1.5" class="stroke-zinc-800/80" />
             <circle id="progress-ring"
@@ -204,7 +201,6 @@
                     stroke-dashoffset="0" />
           </svg>
 
-          <!-- Center content -->
           <div class="absolute inset-0 flex flex-col items-center justify-center gap-1 select-none">
             <span class="text-[10px] uppercase tracking-[0.25em] text-zinc-500 font-medium">Your Code</span>
             <div id="code" class="font-mono text-4xl sm:text-5xl font-medium text-white tabular-nums">
@@ -217,7 +213,6 @@
         </div>
       </button>
 
-      <!-- Footer di dalam card -->
       <div class="mt-5 flex items-center justify-center gap-1.5 text-[11px] text-zinc-500">
         <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -239,7 +234,6 @@
                spellcheck="false" inputmode="text"
                class="field w-full h-14 rounded-2xl pl-4 pr-20 font-mono text-sm tracking-wider placeholder:text-zinc-600 placeholder:font-sans placeholder:tracking-normal placeholder:text-[13px]">
 
-        <!-- Ikon di kanan input -->
         <div class="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
           <div id="error-icon" class="hidden w-8 h-8 flex items-center justify-center text-red-500" title="Secret tidak valid">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -272,16 +266,17 @@
         Share Key
       </button>
 
-      <a href="https://wa.me/6285133334542" target="_blank" rel="noopener noreferrer"
+      <!-- ✅ Support link diubah ke Sociabuzz -->
+      <a href="https://sociabuzz.com/pebrian002" target="_blank" rel="noopener noreferrer"
          class="h-12 rounded-2xl bg-zinc-900/60 border border-zinc-800 text-zinc-300 font-semibold text-[13px] flex items-center justify-center gap-2 hover:text-white hover:border-zinc-700 hover:bg-zinc-900 active:scale-[0.97] transition-all">
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
         </svg>
         Support
       </a>
     </section>
 
-    <!-- ============ GUIDE (collapsible) ============ -->
+    <!-- ============ GUIDE ============ -->
     <details class="group mt-6 rounded-2xl border border-zinc-800/60 bg-zinc-900/30 overflow-hidden">
       <summary class="flex items-center justify-between gap-3 px-4 py-3.5 cursor-pointer select-none active:bg-zinc-900/60 transition-colors">
         <div class="flex items-center gap-2.5">
@@ -297,7 +292,6 @@
       </summary>
 
       <div class="px-4 pb-4 pt-1 space-y-4 border-t border-zinc-800/60">
-
         <div class="flex gap-3 pt-3">
           <div class="w-6 h-6 shrink-0 flex items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400 text-[11px] font-bold border border-emerald-500/25">1</div>
           <div class="min-w-0">
@@ -321,17 +315,15 @@
         <div class="flex gap-3">
           <div class="w-6 h-6 shrink-0 flex items-center justify-center rounded-full bg-amber-500/10 text-amber-400 text-[11px] font-bold border border-amber-500/25">3</div>
           <div class="min-w-0">
-            <p class="text-[13px] font-medium text-white mb-1">Membuat Link Akses</p>
+            <p class="text-[13px] font-medium text-white mb-1">Install sebagai Aplikasi</p>
             <p class="text-[12px] text-zinc-500 leading-relaxed">
-              Masukkan secret key, lalu tekan <span class="text-zinc-300 font-medium">Share Key</span>. Link akan langsung tersalin dan siap dibagikan.
+              Buka menu <span class="text-zinc-300 font-medium">☰ → Install App</span>, atau pada browser Chrome/Edge gunakan opsi <em>"Add to Home Screen"</em>. Setelah terpasang, aplikasi bisa dibuka offline.
             </p>
           </div>
         </div>
-
       </div>
     </details>
 
-    <!-- ============ FOOTER ============ -->
     <footer class="mt-8 text-center">
       <p class="text-[10px] text-zinc-600 font-medium tracking-wide">
         &copy; 2025 FStore Official
@@ -344,10 +336,8 @@
 
   <!-- ===================== MENU OVERLAY ===================== -->
   <div id="menu-overlay" data-open="false" class="fixed inset-0 z-[60] hidden">
-    <!-- Backdrop -->
     <div id="menu-backdrop" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
 
-    <!-- Panel: bottom sheet di mobile, dropdown di desktop -->
     <div id="menu-panel"
          class="absolute left-0 right-0 bottom-0
                 sm:left-auto sm:right-5 sm:top-20 sm:bottom-auto sm:w-80
@@ -357,19 +347,32 @@
                 shadow-2xl shadow-black/60
                 max-h-[85vh] overflow-y-auto">
 
-      <!-- Drag handle (mobile only) -->
       <div class="sm:hidden flex justify-center pt-3 pb-1">
         <div class="w-10 h-1 rounded-full bg-zinc-700"></div>
       </div>
 
       <div class="py-2">
 
-        <!-- Menu header -->
+        <!-- ✅ Install App Button (muncul saat installable) -->
+        <div id="install-section" class="hidden px-3 pt-2 pb-3">
+          <button id="install-btn" type="button"
+                  class="w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl bg-gradient-to-br from-emerald-500/15 to-emerald-500/5 border border-emerald-500/25 text-emerald-300 hover:from-emerald-500/20 hover:to-emerald-500/10 active:scale-[0.98] transition-all text-left">
+            <div class="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0">
+              <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
+              </svg>
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="font-semibold text-[14px] text-white leading-tight">Install App</p>
+              <p class="text-[11px] text-emerald-400/80 leading-tight mt-0.5">Pasang ke home screen</p>
+            </div>
+          </button>
+        </div>
+
         <div class="px-5 py-2 text-[10px] font-semibold text-zinc-500 uppercase tracking-[0.2em]">
           Navigasi
         </div>
 
-        <!-- Toko -->
         <a href="/toko" class="flex items-center gap-3.5 px-5 py-3.5 text-[14px] text-zinc-300 hover:bg-zinc-800/60 active:bg-zinc-800 transition-colors">
           <div class="w-9 h-9 rounded-xl bg-zinc-800/60 flex items-center justify-center shrink-0">
             <svg class="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -382,7 +385,6 @@
           </svg>
         </a>
 
-        <!-- Mail -->
         <a href="/" class="flex items-center gap-3.5 px-5 py-3.5 text-[14px] text-zinc-300 hover:bg-zinc-800/60 active:bg-zinc-800 transition-colors">
           <div class="w-9 h-9 rounded-xl bg-zinc-800/60 flex items-center justify-center shrink-0">
             <svg class="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -395,12 +397,10 @@
           </svg>
         </a>
 
-        <!-- Divider -->
         <div class="px-5 mt-3 mb-1">
           <span class="text-[10px] font-semibold text-zinc-500 uppercase tracking-[0.2em]">Sosial Media</span>
         </div>
 
-        <!-- WhatsApp -->
         <a href="https://wa.me/6285133334542" target="_blank" rel="noopener noreferrer"
            class="flex items-center gap-3.5 px-5 py-3.5 text-[14px] text-zinc-300 hover:bg-zinc-800/60 active:bg-zinc-800 transition-colors">
           <div class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
@@ -414,7 +414,20 @@
           </svg>
         </a>
 
-        <!-- Twitter -->
+        <!-- ✅ Support / Sociabuzz juga ditambahkan di menu -->
+        <a href="https://sociabuzz.com/pebrian002" target="_blank" rel="noopener noreferrer"
+           class="flex items-center gap-3.5 px-5 py-3.5 text-[14px] text-zinc-300 hover:bg-zinc-800/60 active:bg-zinc-800 transition-colors">
+          <div class="w-9 h-9 rounded-xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center shrink-0">
+            <svg class="w-4 h-4 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+          </div>
+          <span class="font-medium">Support (Sociabuzz)</span>
+          <svg class="w-4 h-4 text-zinc-600 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </a>
+
         <a href="https://x.com/F_StoreOfficial" target="_blank" rel="noopener noreferrer"
            class="flex items-center gap-3.5 px-5 py-3.5 text-[14px] text-zinc-300 hover:bg-zinc-800/60 active:bg-zinc-800 transition-colors">
           <div class="w-9 h-9 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center shrink-0">
@@ -428,7 +441,6 @@
           </svg>
         </a>
 
-        <!-- Instagram (soon) -->
         <div class="flex items-center gap-3.5 px-5 py-3.5 text-[14px] text-zinc-500 cursor-default">
           <div class="w-9 h-9 rounded-xl bg-zinc-800/40 flex items-center justify-center shrink-0">
             <svg class="w-4 h-4 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -441,7 +453,6 @@
           <span class="ml-auto text-[10px] font-medium text-zinc-500 bg-zinc-800/80 px-2 py-0.5 rounded-full">Soon</span>
         </div>
 
-        <!-- Facebook (soon) -->
         <div class="flex items-center gap-3.5 px-5 py-3.5 text-[14px] text-zinc-500 cursor-default">
           <div class="w-9 h-9 rounded-xl bg-zinc-800/40 flex items-center justify-center shrink-0">
             <svg class="w-4 h-4 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -454,6 +465,39 @@
 
       </div>
     </div>
+  </div>
+
+  <!-- ===================== INSTALL BANNER (muncul jika installable & belum ditutup) ===================== -->
+  <div id="install-banner"
+       class="fixed left-3 right-3 z-50 hidden
+              bg-zinc-900/95 backdrop-blur-xl border border-zinc-800
+              rounded-2xl shadow-2xl shadow-black/60
+              p-3.5 flex items-center gap-3"
+       style="bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem); max-width: 26rem; margin-inline: auto;">
+
+    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 border border-emerald-500/25 flex items-center justify-center shrink-0">
+      <svg class="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
+      </svg>
+    </div>
+
+    <div class="flex-1 min-w-0">
+      <p class="text-[13px] font-semibold text-white leading-tight">Install Aplikasi</p>
+      <p class="text-[11px] text-zinc-500 leading-tight mt-0.5 truncate">Akses cepat & offline dari home screen</p>
+    </div>
+
+    <button id="install-banner-action"
+            class="h-9 px-3.5 rounded-xl bg-white text-black text-[12px] font-semibold hover:bg-zinc-200 active:scale-[0.97] transition-all shrink-0">
+      Install
+    </button>
+
+    <button id="install-banner-close"
+            class="w-8 h-8 rounded-full flex items-center justify-center text-zinc-500 hover:text-white hover:bg-zinc-800 active:scale-95 transition-all shrink-0"
+            aria-label="Tutup">
+      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
   </div>
 
   <!-- ===================== TOAST ===================== -->
@@ -469,11 +513,9 @@
     function normalizeSecret(str) {
       return (str || '').replace(/\s+/g, '').toUpperCase();
     }
-
     function isValidBase32(str) {
       return /^[A-Z2-7]+=*$/.test(normalizeSecret(str));
     }
-
     function base32ToBytes(base32) {
       const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
       let bits = "", bytes = [];
@@ -489,9 +531,7 @@
       return new Uint8Array(bytes);
     }
 
-    let _lastSecret = null;
-    let _lastWindow = -1;
-    let _cachedCode = "------";
+    let _lastSecret = null, _lastWindow = -1, _cachedCode = "------";
 
     async function generateTOTP(secret) {
       if (!secret || !isValidBase32(secret)) return "------";
@@ -536,9 +576,7 @@
     }
 
     function resetTotpCache() {
-      _lastSecret = null;
-      _lastWindow = -1;
-      _cachedCode = "------";
+      _lastSecret = null; _lastWindow = -1; _cachedCode = "------";
     }
 
     // ============================================================
@@ -560,10 +598,7 @@
         const ok = document.execCommand('copy');
         ta.remove();
         return ok;
-      } catch (e) {
-        console.error("Copy failed:", e);
-        return false;
-      }
+      } catch (e) { console.error("Copy failed:", e); return false; }
     }
 
     // ============================================================
@@ -577,11 +612,9 @@
     const errorIcon = document.getElementById("error-icon");
     const copyFeedback = document.getElementById("copy-feedback");
 
-    const RING_CIRCUMFERENCE = 2 * Math.PI * 46; // ≈ 289
+    const RING_CIRCUMFERENCE = 2 * Math.PI * 46;
 
-    function saveSecret(secret) {
-      try { localStorage.setItem('wap_secret', secret); } catch (e) {}
-    }
+    function saveSecret(secret) { try { localStorage.setItem('wap_secret', secret); } catch (e) {} }
 
     function validateSecret(secret) {
       if (!secret) {
@@ -620,11 +653,9 @@
       const remain = 30 - (epoch % 30);
       timerSec.textContent = `${remain}s`;
 
-      // Ring progress
       const ratio = remain / 30;
       progressRing.style.strokeDashoffset = String(RING_CIRCUMFERENCE * (1 - ratio));
 
-      // Warning state
       const isUrgent = remain <= 5;
       progressRing.classList.toggle("stroke-red-500", isUrgent);
       progressRing.classList.toggle("stroke-white", !isUrgent);
@@ -648,7 +679,6 @@
       toast.className = 'bg-zinc-900 border border-zinc-700 text-white px-4 py-2.5 rounded-2xl shadow-xl shadow-black/40 text-[13px] font-medium pointer-events-auto toast-enter max-w-[92vw] text-center backdrop-blur-xl';
       toast.textContent = message;
       container.appendChild(toast);
-
       setTimeout(() => {
         toast.classList.remove('toast-enter');
         toast.classList.add('toast-exit');
@@ -684,12 +714,9 @@
 
     function openMenu() {
       menuOverlay.classList.remove('hidden');
-      requestAnimationFrame(() => {
-        menuOverlay.dataset.open = 'true';
-      });
+      requestAnimationFrame(() => { menuOverlay.dataset.open = 'true'; });
       document.body.style.overflow = 'hidden';
     }
-
     function closeMenu() {
       menuOverlay.dataset.open = 'false';
       document.body.style.overflow = '';
@@ -701,11 +728,85 @@
       if (menuOverlay.dataset.open === 'true') closeMenu();
       else openMenu();
     });
-
     menuBackdrop.addEventListener('click', closeMenu);
-
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && menuOverlay.dataset.open === 'true') closeMenu();
+    });
+
+    // ============================================================
+    // PWA: Service Worker + Install Prompt
+    // ============================================================
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch((err) => {
+          console.warn('SW registration failed:', err);
+        });
+      });
+    }
+
+    let deferredPrompt = null;
+    const installSection = document.getElementById('install-section');
+    const installBtn = document.getElementById('install-btn');
+    const installBanner = document.getElementById('install-banner');
+    const installBannerAction = document.getElementById('install-banner-action');
+    const installBannerClose = document.getElementById('install-banner-close');
+
+    // Cek apakah sudah installed (standalone)
+    function isStandalone() {
+      return window.matchMedia('(display-mode: standalone)').matches ||
+             window.navigator.standalone === true;
+    }
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+
+      // Tampilkan tombol di menu
+      installSection.classList.remove('hidden');
+
+      // Tampilkan banner (kalau user belum pernah menutupnya)
+      const dismissed = localStorage.getItem('install_banner_dismissed');
+      if (!dismissed && !isStandalone()) {
+        installBanner.classList.remove('hidden');
+        // trigger animation
+        requestAnimationFrame(() => installBanner.classList.add('show'));
+      }
+    });
+
+    async function triggerInstall() {
+      if (!deferredPrompt) {
+        // Fallback: instruksi manual
+        showToast("Buka menu browser → 'Add to Home Screen'", 4000);
+        return;
+      }
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        showToast("✅ Aplikasi berhasil dipasang", 3000);
+      }
+      deferredPrompt = null;
+      installSection.classList.add('hidden');
+      hideInstallBanner();
+    }
+
+    function hideInstallBanner() {
+      installBanner.classList.remove('show');
+      installBanner.classList.add('hide');
+      setTimeout(() => installBanner.classList.add('hidden'), 300);
+    }
+
+    installBtn?.addEventListener('click', triggerInstall);
+    installBannerAction?.addEventListener('click', triggerInstall);
+    installBannerClose?.addEventListener('click', () => {
+      localStorage.setItem('install_banner_dismissed', '1');
+      hideInstallBanner();
+    });
+
+    window.addEventListener('appinstalled', () => {
+      showToast("✅ Aplikasi dipasang", 2500);
+      installSection.classList.add('hidden');
+      hideInstallBanner();
+      deferredPrompt = null;
     });
 
     // ============================================================
