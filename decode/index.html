@@ -1,1172 +1,460 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#0a0e1a">
-<title>Authenticator QR Decoder — Extract Secret Keys</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=5.0">
+<meta name="theme-color" content="#09090b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="format-detection" content="telephone=no">
+<meta name="description" content="QR Decoder Google Authenticator — FStore Official">
+<title>QR Decoder — FStore Official</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+          mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+        },
+      },
+    },
+  };
+</script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/protobufjs@7.2.5/dist/protobuf.min.js"></script>
+
 <style>
   /* ============================================================
-     DESIGN TOKENS
+     MOBILE-FIRST BASE
      ============================================================ */
   :root {
-    --bg-base:      #0a0e1a;
-    --bg-elev-1:    #0f1524;
-    --bg-elev-2:    #151b2e;
-    --bg-elev-3:    #1c2338;
-    --bg-hover:     #232b42;
-
-    --border-subtle: rgba(148, 163, 184, 0.10);
-    --border-default: rgba(148, 163, 184, 0.16);
-    --border-strong: rgba(148, 163, 184, 0.28);
-
-    --text-primary:  #f1f5f9;
-    --text-secondary:#cbd5e1;
-    --text-muted:    #8892a6;
-    --text-dim:      #5c6683;
-
-    --brand-50:  #eff6ff;
-    --brand-400: #60a5fa;
-    --brand-500: #3b82f6;
-    --brand-600: #2563eb;
-    --brand-700: #1d4ed8;
-
-    --accent-glow: rgba(59, 130, 246, 0.35);
-
-    --success:     #10b981;
-    --success-bg:  rgba(16, 185, 129, 0.10);
-    --success-border: rgba(16, 185, 129, 0.35);
-
-    --danger:      #ef4444;
-    --danger-bg:   rgba(239, 68, 68, 0.10);
-    --danger-border: rgba(239, 68, 68, 0.35);
-
-    --warning:     #f59e0b;
-    --warning-bg:  rgba(245, 158, 11, 0.10);
-    --warning-border: rgba(245, 158, 11, 0.35);
-
-    --key-color:   #fbbf24;
-    --key-bg-1:    rgba(251, 191, 36, 0.07);
-    --key-bg-2:    rgba(251, 191, 36, 0.02);
-    --key-border:  rgba(251, 191, 36, 0.22);
-
-    --r-xs: 6px;
-    --r-sm: 8px;
-    --r-md: 12px;
-    --r-lg: 16px;
-    --r-xl: 20px;
-    --r-full: 999px;
-
-    --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
-    --shadow-md: 0 4px 12px rgba(0,0,0,0.25);
-    --shadow-lg: 0 12px 32px rgba(0,0,0,0.35);
-    --shadow-brand: 0 8px 24px rgba(59, 130, 246, 0.28);
-
+    --bg-body: #09090b;
+    --border: #27272a;
     --safe-top: env(safe-area-inset-top, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
     --safe-left: env(safe-area-inset-left, 0px);
     --safe-right: env(safe-area-inset-right, 0px);
   }
 
-  /* ============================================================
-     RESET
-     ============================================================ */
-  *, *::before, *::after {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    -webkit-tap-highlight-color: transparent;
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    scroll-behavior: smooth;
   }
-  html { -webkit-text-size-adjust: 100%; }
+
   body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    background: var(--bg-base);
-    background-image:
-      radial-gradient(circle at 0% 0%, rgba(59, 130, 246, 0.08), transparent 45%),
-      radial-gradient(circle at 100% 100%, rgba(139, 92, 246, 0.06), transparent 50%);
-    background-attachment: fixed;
-    color: var(--text-primary);
-    font-size: 15px;
-    line-height: 1.5;
-    min-height: 100dvh;
-    padding:
-      calc(16px + var(--safe-top))
-      calc(16px + var(--safe-right))
-      calc(32px + var(--safe-bottom))
-      calc(16px + var(--safe-left));
+    background-color: var(--bg-body);
+    color: #fafafa;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-  }
-  img, video, canvas { display: block; max-width: 100%; }
-  button, input, textarea { font: inherit; color: inherit; }
-  button { cursor: pointer; border: none; background: none; }
-  code { font-family: 'JetBrains Mono', ui-monospace, monospace; }
-
-  /* ============================================================
-     LAYOUT
-     ============================================================ */
-  .app {
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: none;
+    overflow-x: hidden;
+    /* Prevent horizontal scroll di mobile */
     width: 100%;
-    max-width: 880px;
-    margin: 0 auto;
+    max-width: 100vw;
   }
 
   /* ============================================================
-     TOP BAR
+     PREVENT ZOOM ON INPUT FOCUS (iOS) - font minimal 16px
      ============================================================ */
-  .topbar {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 12px;
-    padding: 4px 2px 20px;
-    margin-bottom: 8px;
+  input, textarea, select, button {
+    font-size: 16px;
   }
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    min-width: 0;
-  }
-  .brand-mark {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    background: linear-gradient(135deg, var(--brand-500), var(--brand-700));
-    display: grid;
-    place-items: center;
-    font-size: 18px;
-    flex-shrink: 0;
-    box-shadow: var(--shadow-brand);
-  }
-  .brand-text {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-  }
-  .brand-title {
-    font-size: 0.92rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    letter-spacing: -0.01em;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .brand-sub {
-    font-size: 0.72rem;
-    color: var(--text-muted);
-    font-weight: 500;
+  @media (min-width: 640px) {
+    input, textarea, select, button { font-size: inherit; }
   }
 
   /* ============================================================
-     HERO
+     FORM FIELD
      ============================================================ */
-  .hero {
-    text-align: center;
-    padding: 16px 8px 28px;
+  .field {
+    background: rgba(24, 24, 27, 0.6);
+    border: 1px solid var(--border);
+    color: #fff;
+    transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+    -webkit-appearance: none;
+    appearance: none;
   }
-  .hero h1 {
-    font-size: clamp(1.5rem, 6vw, 2.1rem);
-    font-weight: 800;
-    line-height: 1.15;
-    letter-spacing: -0.03em;
-    color: var(--text-primary);
-    margin-bottom: 10px;
+  .field:focus {
+    border-color: #52525b;
+    background: #18181b;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.05);
   }
-  .hero h1 .gradient {
-    background: linear-gradient(135deg, #60a5fa 0%, #a78bfa 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-  }
-  .hero p {
-    font-size: clamp(0.85rem, 3.6vw, 0.95rem);
-    color: var(--text-muted);
-    max-width: 520px;
-    margin: 0 auto;
-    line-height: 1.6;
-  }
-
-  /* ============================================================
-     ALERT
-     ============================================================ */
-  .alert {
-    display: flex;
-    gap: 12px;
-    padding: 14px 16px;
-    border-radius: var(--r-md);
-    background: var(--warning-bg);
-    border: 1px solid var(--warning-border);
-    margin-bottom: 20px;
-    font-size: 0.83rem;
-    line-height: 1.5;
-    color: #fcd34d;
-  }
-  .alert-icon {
-    font-size: 18px;
-    flex-shrink: 0;
-    line-height: 1.4;
-  }
-  .alert strong { color: #fde68a; font-weight: 600; }
 
   /* ============================================================
      CARD
      ============================================================ */
-  .surface {
-    background: var(--bg-elev-1);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--r-lg);
-    box-shadow: var(--shadow-lg);
-    overflow: hidden;
-    margin-bottom: 20px;
+  .card {
+    background: linear-gradient(180deg, rgba(24,24,27,0.75) 0%, rgba(9,9,11,0.6) 100%);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.06);
+    box-shadow:
+      0 1px 0 0 rgba(255,255,255,0.04) inset,
+      0 20px 40px -20px rgba(0,0,0,0.8);
   }
 
   /* ============================================================
-     TABS
+     ANIMATIONS
      ============================================================ */
-  .tabs-wrap {
-    padding: 6px;
-    border-bottom: 1px solid var(--border-subtle);
-    background: var(--bg-elev-2);
-  }
-  .tabs {
-    display: flex;
-    gap: 4px;
-    background: var(--bg-base);
-    padding: 4px;
-    border-radius: var(--r-md);
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .tabs::-webkit-scrollbar { display: none; }
-  .tab {
-    flex: 1 0 auto;
-    min-width: max-content;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-    padding: 10px 16px;
-    border-radius: var(--r-sm);
-    background: transparent;
-    color: var(--text-muted);
-    font-size: 0.85rem;
-    font-weight: 600;
-    white-space: nowrap;
-    transition: all 0.18s ease;
-    position: relative;
-  }
-  .tab:hover:not(.active) { color: var(--text-secondary); }
-  .tab.active {
-    background: var(--bg-elev-3);
-    color: var(--text-primary);
-    box-shadow: var(--shadow-sm);
-  }
-  .tab.active::before {
-    content: "";
-    position: absolute;
-    top: 6px;
-    left: 6px;
-    right: 6px;
-    height: 2px;
-    background: var(--brand-500);
-    border-radius: 2px;
-    opacity: 0.9;
-  }
-  .tab .tab-icon { font-size: 15px; line-height: 1; }
-
-  /* ============================================================
-     PANEL BODY
-     ============================================================ */
-  .panel-body {
-    padding: 20px;
-  }
-  @media (min-width: 640px) {
-    .panel-body { padding: 24px; }
-  }
-  .panel { display: none; }
-  .panel.active { display: block; animation: fadeSlide 0.28s cubic-bezier(0.4, 0, 0.2, 1); }
   @keyframes fadeSlide {
     from { opacity: 0; transform: translateY(6px); }
     to   { opacity: 1; transform: translateY(0); }
   }
+  .animate-fade-slide { animation: fadeSlide .28s cubic-bezier(.32,.72,0,1) forwards; }
 
-  .step-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--text-dim);
-    margin-bottom: 12px;
-  }
-  .step-label::before {
-    content: "";
-    width: 4px;
-    height: 14px;
-    background: var(--brand-500);
-    border-radius: 2px;
-  }
-
-  /* ============================================================
-     CAMERA
-     ============================================================ */
-  .video-wrap {
-    position: relative;
-    width: 100%;
-    max-width: 440px;
-    margin: 0 auto;
-    aspect-ratio: 1 / 1;
-    background: #000;
-    border-radius: var(--r-md);
-    overflow: hidden;
-    border: 1px solid var(--border-default);
-  }
-  video {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  .scan-overlay {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  .scan-box {
-    position: relative;
-    width: 62%;
-    aspect-ratio: 1 / 1;
-  }
-  .scan-box::before,
-  .scan-box::after {
-    content: "";
-    position: absolute;
-    width: 32px;
-    height: 32px;
-    border: 3px solid var(--brand-400);
-    border-radius: 8px;
-    filter: drop-shadow(0 0 8px var(--accent-glow));
-  }
-  .scan-box::before { top: 0; left: 0; border-right: none; border-bottom: none; }
-  .scan-box::after  { bottom: 0; right: 0; border-left: none; border-top: none; }
-  .scan-line {
-    position: absolute;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, var(--brand-400), transparent);
-    box-shadow: 0 0 12px var(--brand-400);
-    animation: scanline 2.2s ease-in-out infinite;
-  }
   @keyframes scanline {
     0%, 100% { top: 8%; opacity: 0; }
     10%, 90% { opacity: 1; }
     50% { top: 92%; }
   }
+  .scan-line {
+    position: absolute; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent, #60a5fa, transparent);
+    box-shadow: 0 0 12px #60a5fa;
+    animation: scanline 2.2s ease-in-out infinite;
+  }
 
-  .cam-placeholder {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    background: linear-gradient(160deg, var(--bg-elev-2), var(--bg-base));
-    color: var(--text-muted);
-    text-align: center;
-    padding: 24px;
+  summary { list-style: none; }
+  summary::-webkit-details-marker { display: none; }
+
+  #dropZone.dragover {
+    border-color: #60a5fa;
+    background: rgba(59,130,246,0.06);
   }
-  .cam-placeholder .icon-box {
-    width: 64px;
-    height: 64px;
-    border-radius: var(--r-lg);
-    background: var(--bg-elev-3);
-    border: 1px solid var(--border-default);
-    display: grid;
-    place-items: center;
-    font-size: 28px;
-    margin-bottom: 4px;
-  }
-  .cam-placeholder .title {
-    font-weight: 600;
-    color: var(--text-secondary);
-    font-size: 0.92rem;
-  }
-  .cam-placeholder .sub {
-    font-size: 0.78rem;
-    color: var(--text-dim);
-    max-width: 240px;
+
+  .copy-success {
+    background: rgba(16,185,129,0.1) !important;
+    border-color: rgba(16,185,129,0.35) !important;
+    color: #6ee7b7 !important;
   }
 
   /* ============================================================
-     BUTTONS
+     TAP TARGET OPTIMIZATION
      ============================================================ */
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 0 20px;
-    height: 46px;
-    border-radius: var(--r-sm);
-    font-size: 0.88rem;
-    font-weight: 600;
-    letter-spacing: -0.005em;
-    transition: all 0.16s ease;
-    white-space: nowrap;
+  button, a, [role="tab"] {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
     user-select: none;
-    border: 1px solid transparent;
-    text-align: center;
-    text-decoration: none;
+    -webkit-user-select: none;
   }
-  .btn:active:not(:disabled) { transform: translateY(1px); }
-  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
-
-  .btn-primary {
-    background: var(--brand-500);
-    color: #fff;
-    box-shadow: var(--shadow-brand);
-  }
-  .btn-primary:hover:not(:disabled) { background: var(--brand-600); }
-
-  .btn-secondary {
-    background: var(--bg-elev-3);
-    color: var(--text-primary);
-    border-color: var(--border-default);
-  }
-  .btn-secondary:hover:not(:disabled) {
-    background: var(--bg-hover);
-    border-color: var(--border-strong);
-  }
-
-  .btn-danger {
-    background: var(--danger-bg);
-    color: #fca5a5;
-    border-color: var(--danger-border);
-  }
-  .btn-danger:hover:not(:disabled) {
-    background: rgba(239, 68, 68, 0.18);
-    color: #fecaca;
-  }
-
-  .btn-ghost {
-    background: transparent;
-    color: var(--text-muted);
-    border-color: transparent;
-  }
-  .btn-ghost:hover:not(:disabled) {
-    background: var(--bg-elev-3);
-    color: var(--text-primary);
-  }
-
-  .btn-sm { height: 36px; padding: 0 14px; font-size: 0.8rem; }
-
-  .btn-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-top: 16px;
-  }
-  .btn-row.single { grid-template-columns: 1fr; }
-  .btn-row .btn { width: 100%; }
 
   /* ============================================================
-     UPLOAD DROPZONE
+     SAFE AREA UTILITIES
      ============================================================ */
-  .dropzone {
-    border: 2px dashed var(--border-default);
-    border-radius: var(--r-md);
-    padding: 40px 20px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    background: var(--bg-elev-2);
-    color: var(--text-muted);
-  }
-  .dropzone:hover,
-  .dropzone.dragover {
-    border-color: var(--brand-500);
-    background: rgba(59, 130, 246, 0.06);
-    color: var(--text-secondary);
-  }
-  .dropzone .icon-box {
-    width: 64px;
-    height: 64px;
-    border-radius: var(--r-lg);
-    background: var(--bg-elev-3);
-    border: 1px solid var(--border-default);
-    display: grid;
-    place-items: center;
-    font-size: 28px;
-    margin: 0 auto 14px;
-    transition: all 0.2s ease;
-  }
-  .dropzone:hover .icon-box {
-    border-color: var(--brand-500);
-    background: rgba(59, 130, 246, 0.12);
-  }
-  .dropzone .title {
-    font-weight: 600;
-    color: var(--text-primary);
-    font-size: 0.92rem;
-    margin-bottom: 4px;
-  }
-  .dropzone .sub {
-    font-size: 0.78rem;
-    color: var(--text-dim);
-  }
-  .dropzone input { display: none; }
+  .pt-safe { padding-top: var(--safe-top); }
+  .pb-safe { padding-bottom: var(--safe-bottom); }
+  .pl-safe { padding-left: var(--safe-left); }
+  .pr-safe { padding-right: var(--safe-right); }
 
   /* ============================================================
-     INPUT
+     SCROLLBAR HIDE
      ============================================================ */
-  .input-label {
-    display: block;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--text-muted);
-    margin-bottom: 8px;
-    letter-spacing: 0.01em;
-  }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* ============================================================
+     TEXTAREA MOBILE
+     ============================================================ */
   textarea {
-    width: 100%;
-    padding: 14px 16px;
-    border-radius: var(--r-sm);
-    background: var(--bg-base);
-    border: 1px solid var(--border-default);
-    color: var(--text-primary);
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
-    font-size: 0.82rem;
-    line-height: 1.6;
-    resize: vertical;
-    min-height: 100px;
-    outline: none;
-    transition: all 0.15s ease;
-  }
-  textarea::placeholder { color: var(--text-dim); }
-  textarea:focus {
-    border-color: var(--brand-500);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-  }
-
-  /* ============================================================
-     STATUS
-     ============================================================ */
-  .status {
-    display: none;
-    align-items: flex-start;
-    gap: 10px;
-    padding: 12px 14px;
-    border-radius: var(--r-sm);
-    margin-top: 16px;
-    font-size: 0.83rem;
-    line-height: 1.45;
-    border: 1px solid;
-  }
-  .status.show {
-    display: flex;
-    animation: fadeSlide 0.22s ease;
-  }
-  .status-icon { font-size: 15px; flex-shrink: 0; line-height: 1.4; }
-  .status.info {
-    background: rgba(59, 130, 246, 0.08);
-    border-color: rgba(59, 130, 246, 0.3);
-    color: #93c5fd;
-  }
-  .status.success {
-    background: var(--success-bg);
-    border-color: var(--success-border);
-    color: #6ee7b7;
-  }
-  .status.error {
-    background: var(--danger-bg);
-    border-color: var(--danger-border);
-    color: #fca5a5;
-  }
-
-  /* ============================================================
-     RESULTS
-     ============================================================ */
-  .results-surface {
-    background: var(--bg-elev-1);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--r-lg);
-    box-shadow: var(--shadow-lg);
-    overflow: hidden;
-    margin-bottom: 20px;
-  }
-  .results-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 18px 20px;
-    border-bottom: 1px solid var(--border-subtle);
-    background: var(--bg-elev-2);
-    flex-wrap: wrap;
-  }
-  .results-title {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    letter-spacing: -0.01em;
-  }
-  .results-title .check {
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    background: var(--success-bg);
-    border: 1px solid var(--success-border);
-    display: grid;
-    place-items: center;
-    font-size: 13px;
-    color: var(--success);
-  }
-  .count-badge {
-    background: var(--bg-elev-3);
-    border: 1px solid var(--border-default);
-    color: var(--text-secondary);
-    font-size: 0.72rem;
-    font-weight: 700;
-    padding: 3px 10px;
-    border-radius: var(--r-full);
-    font-family: 'JetBrains Mono', monospace;
-  }
-  .results-actions {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-  }
-  .results-list { padding: 18px 20px 20px; }
-
-  /* ============================================================
-     ACCOUNT CARD — disederhanakan (2 opsi saja)
-     ============================================================ */
-  .account {
-    background: var(--bg-elev-2);
-    border: 1px solid var(--border-default);
-    border-radius: var(--r-md);
-    padding: 16px;
-    margin-bottom: 12px;
-    transition: border-color 0.2s ease;
-  }
-  .account:last-child { margin-bottom: 0; }
-  .account:hover { border-color: var(--border-strong); }
-
-  /* Header akun — nama + issuer + index */
-  .account-head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 16px;
-    padding-bottom: 14px;
-    border-bottom: 1px dashed var(--border-subtle);
-  }
-  .account-identity {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    min-width: 0;
-    flex: 1;
-  }
-  .account-name {
-    font-size: 0.98rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    letter-spacing: -0.01em;
-    word-break: break-word;
-    line-height: 1.3;
-  }
-  .account-issuer {
-    font-size: 0.72rem;
-    font-weight: 600;
-    color: var(--brand-400);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    word-break: break-word;
-  }
-  .account-index {
-    flex-shrink: 0;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.7rem;
-    color: var(--text-dim);
-    background: var(--bg-elev-3);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--r-xs);
-    padding: 3px 8px;
-    font-weight: 500;
-  }
-
-  /* ============================================================
-     OPTION ROWS — 2 opsi (Secret Key + Buka 2FA)
-     ============================================================ */
-  .option {
-    margin-bottom: 12px;
-  }
-  .option:last-child { margin-bottom: 0; }
-
-  .option-label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.68rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    margin-bottom: 6px;
-  }
-  .option-label .num {
-    display: inline-grid;
-    place-items: center;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    font-size: 0.6rem;
-    font-weight: 800;
-    font-family: 'JetBrains Mono', monospace;
-  }
-  .option-label.secret .num {
-    background: var(--key-color);
-    color: #78350f;
-  }
-  .option-label.secret { color: var(--key-color); }
-  .option-label.open .num {
-    background: var(--brand-500);
-    color: #fff;
-  }
-  .option-label.open { color: var(--brand-400); }
-
-  /* Secret key block */
-  .secret-block {
-    background: linear-gradient(135deg, var(--key-bg-1), var(--key-bg-2));
-    border: 1px solid var(--key-border);
-    border-radius: var(--r-sm);
-    padding: 12px 14px;
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  .secret-block::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 3px;
-    height: 100%;
-    background: var(--key-color);
-    opacity: 0.8;
-  }
-  .secret-value {
-    flex: 1;
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--key-color);
-    letter-spacing: 0.04em;
+    -webkit-appearance: none;
+    appearance: none;
     word-break: break-all;
-    overflow-wrap: anywhere;
-    line-height: 1.5;
-    min-width: 0;
-    user-select: all;
-  }
-
-  /* Open 2FA row — tombol besar */
-  .open-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    background: var(--bg-base);
-    border: 1px solid var(--border-subtle);
-    border-radius: var(--r-sm);
-    padding: 8px 8px 8px 14px;
-  }
-  .open-url {
-    flex: 1;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.72rem;
-    color: var(--text-muted);
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    min-width: 0;
-    user-select: all;
-  }
-  .open-url .host { color: var(--brand-400); font-weight: 600; }
-  .open-url .key-part { color: var(--key-color); font-weight: 600; }
-
-  .btn-open {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: var(--brand-500);
-    color: #fff;
-    padding: 0 16px;
-    height: 38px;
-    border-radius: var(--r-xs);
-    font-size: 0.82rem;
-    font-weight: 600;
-    white-space: nowrap;
-    flex-shrink: 0;
-    text-decoration: none;
-    transition: all 0.15s ease;
-    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.28);
-  }
-  .btn-open:hover {
-    background: var(--brand-600);
-    box-shadow: 0 6px 18px rgba(59, 130, 246, 0.4);
-  }
-  .btn-open:active { transform: translateY(1px); }
-  .btn-open .arrow {
-    transition: transform 0.15s ease;
-  }
-  .btn-open:hover .arrow { transform: translateX(2px); }
-
-  /* ============================================================
-     COPY BUTTON
-     ============================================================ */
-  .copy-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    background: var(--bg-elev-3);
-    border: 1px solid var(--border-default);
-    color: var(--text-secondary);
-    padding: 6px 11px;
-    border-radius: var(--r-xs);
-    font-size: 0.72rem;
-    font-weight: 600;
-    white-space: nowrap;
-    flex-shrink: 0;
-    transition: all 0.15s ease;
-    height: 32px;
-    position: relative;
-  }
-  .copy-btn:hover {
-    background: var(--bg-hover);
-    border-color: var(--border-strong);
-    color: var(--text-primary);
-  }
-  .copy-btn:active { transform: scale(0.96); }
-  .copy-btn.copied {
-    background: var(--success-bg);
-    border-color: var(--success-border);
-    color: #6ee7b7;
+    line-height: 1.55;
   }
 
   /* ============================================================
-     FOOTER
+     VIDEO & CANVAS
      ============================================================ */
-  .footer {
-    margin-top: 32px;
-    padding-top: 28px;
-    border-top: 1px solid var(--border-subtle);
-    text-align: center;
-  }
-  .footer-brand {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    margin-bottom: 14px;
-  }
-  .footer-logo {
-    width: 32px;
-    height: 32px;
-    border-radius: 9px;
-    background: linear-gradient(135deg, var(--brand-500), var(--brand-700));
-    display: grid;
-    place-items: center;
-    font-size: 15px;
-    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
-  }
-  .footer-company {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    text-align: left;
-    line-height: 1.2;
-  }
-  .footer-company-name {
-    font-size: 0.92rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    letter-spacing: -0.01em;
-  }
-  .footer-company-tag {
-    font-size: 0.68rem;
-    font-weight: 600;
-    color: var(--brand-400);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-  }
-
-  .footer-divider {
-    width: 40px;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, var(--brand-500), transparent);
-    margin: 0 auto 14px;
-    border-radius: 2px;
-    opacity: 0.6;
-  }
-
-  .footer-copy {
-    font-size: 0.78rem;
-    color: var(--text-muted);
-    line-height: 1.7;
-    font-weight: 500;
-  }
-  .footer-copy .highlight {
-    color: var(--text-secondary);
-    font-weight: 600;
-  }
-  .footer-copy .symbol {
-    color: var(--brand-400);
-    font-weight: 700;
-    margin: 0 4px;
-  }
-
-  .footer-meta {
-    margin-top: 10px;
-    font-size: 0.68rem;
-    color: var(--text-dim);
-    font-weight: 500;
-    letter-spacing: 0.02em;
-  }
-  .footer-meta .dot-sep {
-    margin: 0 6px;
-    opacity: 0.5;
+  video, canvas {
+    display: block;
+    max-width: 100%;
   }
 
   /* ============================================================
-     UTILITIES
+     RESPONSIVE BREAKPOINTS
      ============================================================ */
-  .hidden { display: none !important; }
 
-  /* ============================================================
-     RESPONSIVE
-     ============================================================ */
-  @media (min-width: 640px) {
+  /* SMALL MOBILE — 320px to 379px */
+  @media (max-width: 379px) {
+    .container-px { padding-left: 14px; padding-right: 14px; }
+    .hero-title { font-size: 20px !important; }
+    .hero-desc { font-size: 12px !important; }
+    .tab-text { font-size: 11px !important; }
+    .account-name { font-size: 12px !important; }
+    .secret-value { font-size: 12px !important; letter-spacing: 0.02em !important; }
+    .url-text { font-size: 9px !important; }
+  }
+
+  /* NORMAL MOBILE — 380px to 767px */
+  @media (min-width: 380px) and (max-width: 767px) {
+    /* default mobile styles */
+  }
+
+  /* TABLET & DESKTOP — 768px+ */
+  @media (min-width: 768px) {
     body {
-      font-size: 15.5px;
-      padding: 24px 24px 48px;
-    }
-    .topbar { padding: 8px 4px 24px; }
-    .brand-mark { width: 40px; height: 40px; font-size: 20px; }
-    .brand-title { font-size: 1rem; }
-    .btn-row { display: flex; flex-wrap: wrap; }
-    .btn-row .btn { width: auto; min-width: 150px; }
-    .account { padding: 20px; }
-    .results-list { padding: 20px 24px 24px; }
-    .results-header { padding: 20px 24px; }
-  }
-
-  @media (max-width: 480px) {
-    .open-row {
-      flex-direction: column;
-      align-items: stretch;
-      padding: 10px;
-      gap: 8px;
-    }
-    .open-url {
-      white-space: normal;
-      word-break: break-all;
-      line-height: 1.4;
-    }
-    .btn-open {
-      width: 100%;
-      height: 40px;
+      display: flex;
+      align-items: flex-start;
       justify-content: center;
+      padding: 24px 0;
     }
   }
 
-  @media (max-width: 400px) {
-    .tab { padding: 9px 10px; font-size: 0.79rem; gap: 5px; }
-    .tab .tab-icon { font-size: 14px; }
-    .btn { padding: 0 14px; font-size: 0.83rem; }
-    .secret-value { font-size: 0.84rem; }
-    .footer-company-name { font-size: 0.85rem; }
-    .footer-company-tag { font-size: 0.62rem; }
-    .account { padding: 14px; }
-    .secret-block { padding: 10px 12px; gap: 8px; }
+  /* ============================================================
+     LANDSCAPE MODE (mobile landscape)
+     ============================================================ */
+  @media (max-height: 500px) and (orientation: landscape) {
+    .mobile-compact {
+      padding-top: 8px !important;
+      padding-bottom: 8px !important;
+    }
   }
 
+  /* ============================================================
+     REDUCED MOTION
+     ============================================================ */
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
-      animation-duration: 0.001ms !important;
+      animation-duration: .01ms !important;
       animation-iteration-count: 1 !important;
-      transition-duration: 0.001ms !important;
+      transition-duration: .01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* ============================================================
+     DARK MODE OPTIMIZATION FOR OLED
+     ============================================================ */
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
     }
   }
 </style>
 </head>
-<body>
-<div class="app">
+<body class="min-h-[100dvh] w-full flex flex-col font-sans antialiased">
 
-  <!-- TOP BAR -->
-  <div class="topbar">
-    <div class="brand">
-      <div class="brand-mark">🔐</div>
-      <div class="brand-text">
-        <div class="brand-title">Authenticator Decoder</div>
-        <div class="brand-sub">by Fstore Official</div>
+<!-- ===================== HEADER ===================== -->
+<header class="sticky top-0 z-40 backdrop-blur-xl bg-zinc-950/70 border-b border-zinc-900/80 pt-safe">
+  <div class="w-full max-w-md mx-auto px-4 sm:px-5 h-14 sm:h-16 flex items-center justify-between">
+    <div class="flex items-center gap-2.5 min-w-0 flex-1">
+      <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shrink-0 shadow-lg shadow-blue-500/20">
+        <svg class="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+        </svg>
+      </div>
+      <div class="min-w-0">
+        <h1 class="text-[13px] sm:text-sm font-semibold text-white leading-tight truncate">QR Decoder</h1>
+        <p class="text-[9px] sm:text-[10px] text-zinc-500 leading-tight truncate">FStore Official</p>
       </div>
     </div>
+    <a href="https://fstore.web.id/2fa/" class="h-8 sm:h-9 px-3 sm:px-3.5 rounded-full bg-zinc-900/60 border border-zinc-800 text-zinc-300 text-[10px] sm:text-[11px] font-medium flex items-center gap-1.5 hover:text-white hover:border-zinc-700 hover:bg-zinc-900 active:scale-95 transition-all shrink-0">
+      <svg class="w-3 h-3 sm:w-3.5 sm:h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+      </svg>
+      2FA
+    </a>
+  </div>
+</header>
+
+<!-- ===================== MAIN ===================== -->
+<main class="flex-1 w-full max-w-md mx-auto px-4 sm:px-5 pt-5 sm:pt-6 pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)]">
+
+  <!-- ============ HERO ============ -->
+  <section class="text-center mb-5 sm:mb-6 mobile-compact">
+    <h2 class="hero-title text-[20px] sm:text-[22px] font-semibold text-white leading-snug tracking-tight">
+      Ekstrak <span class="bg-gradient-to-r from-blue-400 to-violet-400 bg-clip-text text-transparent">Secret Key</span><br>dari QR Code
+    </h2>
+    <p class="hero-desc text-[12px] sm:text-[13px] text-zinc-500 mt-2 leading-relaxed max-w-xs mx-auto px-2">
+      Ubah kode QR migrasi Google Authenticator menjadi Secret Key yang bisa dipindahkan ke aplikasi autentikator lain.
+    </p>
+  </section>
+
+  <!-- ============ ALERT ============ -->
+  <div class="rounded-2xl border border-amber-500/25 bg-amber-500/10 px-3.5 sm:px-4 py-3 sm:py-3.5 mb-4 sm:mb-5 flex gap-2.5 sm:gap-3">
+    <svg class="w-4 h-4 text-amber-400 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+    </svg>
+    <p class="text-[11px] text-amber-200/90 leading-relaxed">
+      <strong class="font-semibold text-amber-100">Privasi terjaga:</strong> Semua decoding terjadi di browser Anda. Tidak ada data yang dikirim ke server.
+    </p>
   </div>
 
-  <!-- HERO -->
-  <div class="hero">
-    <h1>Ekstrak <span class="gradient">Secret Key</span><br>dari QR Code</h1>
-    <p>Ubah kode QR migrasi Google Authenticator menjadi Secret Key yang bisa dipindahkan ke aplikasi autentikator lain.</p>
-  </div>
+  <!-- ============ MAIN CARD ============ -->
+  <div class="card rounded-2xl sm:rounded-3xl overflow-hidden">
 
-  <!-- ALERT -->
-  <div class="alert">
-    <div class="alert-icon">🛡️</div>
-    <div>
-      <strong>Privasi terjaga:</strong> Semua decoding terjadi di browser Anda. Tidak ada data yang dikirim ke server. Jangan bagikan Secret Key kepada siapa pun.
-    </div>
-  </div>
-
-  <!-- MAIN CARD -->
-  <div class="surface">
-    <div class="tabs-wrap">
-      <div class="tabs" role="tablist">
-        <button class="tab active" data-tab="upload" role="tab">
-          <span class="tab-icon">🖼️</span> Upload
+    <!-- Tabs -->
+    <div class="p-1.5 border-b border-white/[0.06] bg-zinc-900/40">
+      <div class="grid grid-cols-3 gap-1 bg-zinc-950/60 rounded-xl sm:rounded-2xl p-1" role="tablist">
+        <button class="tab active h-11 sm:h-10 rounded-lg sm:rounded-xl text-zinc-400 hover:text-zinc-200 transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 active:scale-[0.97]" data-tab="upload" role="tab">
+          <svg class="w-4 h-4 sm:w-3.5 sm:h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+          <span class="tab-text text-[11px] sm:text-[12px] font-semibold">Upload</span>
         </button>
-        <button class="tab" data-tab="camera" role="tab">
-          <span class="tab-icon">📷</span> Kamera
+        <button class="tab h-11 sm:h-10 rounded-lg sm:rounded-xl text-zinc-400 hover:text-zinc-200 transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 active:scale-[0.97]" data-tab="camera" role="tab">
+          <svg class="w-4 h-4 sm:w-3.5 sm:h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+          <span class="tab-text text-[11px] sm:text-[12px] font-semibold">Kamera</span>
         </button>
-        <button class="tab" data-tab="manual" role="tab">
-          <span class="tab-icon">🔗</span> Link
+        <button class="tab h-11 sm:h-10 rounded-lg sm:rounded-xl text-zinc-400 hover:text-zinc-200 transition-all flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 active:scale-[0.97]" data-tab="manual" role="tab">
+          <svg class="w-4 h-4 sm:w-3.5 sm:h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+          </svg>
+          <span class="tab-text text-[11px] sm:text-[12px] font-semibold">Link</span>
         </button>
       </div>
     </div>
 
-    <div class="panel-body">
-      <!-- UPLOAD PANEL -->
+    <!-- Panel Body -->
+    <div class="p-4 sm:p-5">
+
+      <!-- ===== UPLOAD PANEL ===== -->
       <div class="panel active" id="panel-upload">
-        <div class="step-label">Upload Gambar QR</div>
-        <div class="dropzone" id="dropZone">
-          <input type="file" id="fileInput" accept="image/*">
-          <div class="icon-box">📁</div>
-          <div class="title">Ketuk untuk pilih gambar</div>
-          <div class="sub">atau tarik file ke sini · PNG, JPG, WEBP</div>
+        <p class="text-[10px] sm:text-[11px] uppercase tracking-wider text-zinc-500 font-medium mb-3 px-1">Upload Gambar QR</p>
+        <div id="dropZone" class="rounded-2xl border-2 border-dashed border-zinc-800 bg-zinc-900/40 px-4 sm:px-6 py-8 sm:py-10 text-center cursor-pointer hover:border-blue-500/60 hover:bg-blue-500/[0.04] active:border-blue-500/60 active:bg-blue-500/[0.04] transition-all">
+          <input type="file" id="fileInput" accept="image/*" class="hidden">
+          <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-zinc-800/80 border border-zinc-700/60 flex items-center justify-center mx-auto mb-3">
+            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg>
+          </div>
+          <p class="text-[13px] sm:text-[13px] font-medium text-zinc-200">Ketuk untuk pilih gambar</p>
+          <p class="text-[11px] text-zinc-500 mt-1">atau tarik file ke sini · PNG, JPG, WEBP</p>
         </div>
       </div>
 
-      <!-- CAMERA PANEL -->
-      <div class="panel" id="panel-camera">
-        <div class="step-label">Scan QR Code</div>
-        <div class="video-wrap">
-          <video id="video" playsinline autoplay muted></video>
-          <div class="scan-overlay hidden" id="scanOverlay">
-            <div class="scan-box">
+      <!-- ===== CAMERA PANEL ===== -->
+      <div class="panel hidden" id="panel-camera">
+        <p class="text-[10px] sm:text-[11px] uppercase tracking-wider text-zinc-500 font-medium mb-3 px-1">Scan QR Code</p>
+        <div class="relative w-full aspect-square max-w-[320px] sm:max-w-[340px] mx-auto bg-black rounded-2xl overflow-hidden border border-zinc-800">
+          <video id="video" playsinline autoplay muted class="w-full h-full object-cover"></video>
+          <div class="scan-overlay hidden absolute inset-0 pointer-events-none flex items-center justify-center" id="scanOverlay">
+            <div class="relative w-[62%] aspect-square">
+              <div class="absolute top-0 left-0 w-7 h-7 sm:w-8 sm:h-8 border-t-[3px] border-l-[3px] border-blue-400 rounded-tl-lg"></div>
+              <div class="absolute bottom-0 right-0 w-7 h-7 sm:w-8 sm:h-8 border-b-[3px] border-r-[3px] border-blue-400 rounded-br-lg"></div>
               <div class="scan-line"></div>
             </div>
           </div>
-          <div class="cam-placeholder" id="camPlaceholder">
-            <div class="icon-box">📷</div>
-            <div class="title">Kamera belum aktif</div>
-            <div class="sub">Aktifkan kamera untuk memindai kode QR secara langsung</div>
+          <div id="camPlaceholder" class="absolute inset-0 flex flex-col items-center justify-center gap-2.5 bg-gradient-to-b from-zinc-900 to-zinc-950 text-center p-5">
+            <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-zinc-800/80 border border-zinc-700/60 flex items-center justify-center">
+              <svg class="w-5 h-5 sm:w-6 sm:h-6 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+              </svg>
+            </div>
+            <p class="text-[12px] sm:text-[13px] font-medium text-zinc-300">Kamera belum aktif</p>
+            <p class="text-[11px] text-zinc-600 max-w-[200px] leading-relaxed">Aktifkan kamera untuk memindai kode QR secara langsung</p>
           </div>
         </div>
         <canvas id="canvas" class="hidden"></canvas>
-        <div class="btn-row">
-          <button class="btn btn-primary" id="startCam">
-            <span>▶</span> Mulai Kamera
+        <div class="grid grid-cols-2 gap-2.5 mt-4">
+          <button class="h-12 rounded-2xl bg-white text-black font-semibold text-[13px] flex items-center justify-center gap-2 hover:bg-zinc-200 active:scale-[0.97] active:bg-zinc-300 transition-all" id="startCam">
+            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            Mulai
           </button>
-          <button class="btn btn-secondary" id="stopCam" disabled>
-            <span>■</span> Stop
-          </button>
-        </div>
-      </div>
-
-      <!-- MANUAL PANEL -->
-      <div class="panel" id="panel-manual">
-        <div class="step-label">Input Link Manual</div>
-        <label class="input-label" for="manualInput">Tempelkan link migrasi di bawah ini</label>
-        <textarea id="manualInput" placeholder="otpauth-migration://offline?data=..."></textarea>
-        <div class="btn-row single" style="margin-top:14px;">
-          <button class="btn btn-primary" id="decodeManual">
-            <span>🔓</span> Decode Sekarang
+          <button class="h-12 rounded-2xl bg-zinc-900/60 border border-zinc-800 text-zinc-300 font-semibold text-[13px] flex items-center justify-center gap-2 hover:text-white hover:border-zinc-700 hover:bg-zinc-900 active:scale-[0.97] transition-all disabled:opacity-40 disabled:active:scale-100" id="stopCam" disabled>
+            <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+            Stop
           </button>
         </div>
       </div>
 
-      <!-- STATUS -->
-      <div class="status" id="status">
-        <span class="status-icon">ℹ️</span>
-        <span id="statusText"></span>
+      <!-- ===== MANUAL PANEL ===== -->
+      <div class="panel hidden" id="panel-manual">
+        <p class="text-[10px] sm:text-[11px] uppercase tracking-wider text-zinc-500 font-medium mb-3 px-1">Input Link Manual</p>
+        <label for="manualInput" class="block text-[11px] text-zinc-500 mb-2 px-1">Tempelkan link migrasi di bawah ini</label>
+        <textarea id="manualInput" rows="4" placeholder="otpauth-migration://offline?data=..." class="field w-full rounded-2xl px-3.5 sm:px-4 py-3 font-mono text-[12px] leading-relaxed resize-y min-h-[100px] placeholder:text-zinc-600"></textarea>
+        <button class="w-full h-12 mt-3 rounded-2xl bg-white text-black font-semibold text-[13px] flex items-center justify-center gap-2 hover:bg-zinc-200 active:scale-[0.98] active:bg-zinc-300 transition-all" id="decodeManual">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/>
+          </svg>
+          Decode Sekarang
+        </button>
       </div>
+
+      <!-- ===== STATUS ===== -->
+      <div id="status" class="hidden mt-4 rounded-2xl px-3.5 sm:px-4 py-3 text-[11px] leading-relaxed flex items-start gap-2.5"></div>
+
     </div>
   </div>
 
-  <!-- RESULTS -->
-  <div class="results-surface hidden" id="resultCard">
-    <div class="results-header">
-      <div class="results-title">
-        <span class="check">✓</span>
-        Hasil Decode
-        <span class="count-badge" id="accountCount">0</span>
+  <!-- ============ RESULTS ============ -->
+  <div id="resultCard" class="hidden mt-4 sm:mt-5">
+    <div class="card rounded-2xl sm:rounded-3xl overflow-hidden">
+      <!-- Header -->
+      <div class="flex items-center justify-between gap-2 px-3.5 sm:px-5 py-3 sm:py-4 border-b border-white/[0.06] bg-zinc-900/40">
+        <div class="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
+          <div class="w-6 h-6 rounded-full bg-emerald-500/10 border border-emerald-500/25 flex items-center justify-center shrink-0">
+            <svg class="w-3 h-3 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+            </svg>
+          </div>
+          <span class="text-[12px] sm:text-[13px] font-semibold text-white truncate">Hasil Decode</span>
+          <span class="text-[10px] font-mono font-bold text-zinc-400 bg-zinc-800/60 border border-zinc-700/60 rounded-full px-2 sm:px-2.5 py-0.5 shrink-0" id="accountCount">0</span>
+        </div>
+        <div class="flex items-center gap-1 shrink-0">
+          <button class="h-8 px-2.5 sm:px-3 rounded-lg text-[11px] font-medium text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60 active:bg-zinc-800/60 active:scale-95 transition-all flex items-center gap-1.5" id="copyAll">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+            </svg>
+            <span class="hidden sm:inline">Copy</span>
+          </button>
+          <button class="h-8 w-8 rounded-lg text-[11px] text-zinc-400 hover:text-red-400 hover:bg-red-500/10 active:bg-red-500/10 active:scale-95 transition-all flex items-center justify-center" id="clearAll" title="Bersihkan">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+            </svg>
+          </button>
+        </div>
       </div>
-      <div class="results-actions">
-        <button class="btn btn-ghost btn-sm" id="copyAll">📋 Copy Semua</button>
-        <button class="btn btn-ghost btn-sm" id="downloadJson">💾 JSON</button>
-        <button class="btn btn-ghost btn-sm" id="clearAll" style="color:#fca5a5;">🗑️</button>
-      </div>
+
+      <!-- List -->
+      <div class="p-3 sm:p-4 space-y-2.5 sm:space-y-3" id="results"></div>
     </div>
-    <div class="results-list" id="results"></div>
   </div>
 
-  <!-- FOOTER -->
-  <footer class="footer">
-    <div class="footer-brand">
-      <div class="footer-logo">🔐</div>
-      <div class="footer-company">
-        <div class="footer-company-name">Fstore Official</div>
-        <div class="footer-company-tag">Security Tools</div>
+</main>
+
+<!-- ===================== FOOTER ===================== -->
+<footer class="w-full max-w-md mx-auto px-4 sm:px-5 pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)] pt-5 sm:pt-6">
+  <div class="border-t border-zinc-900 pt-5 sm:pt-6 text-center">
+    <div class="inline-flex items-center gap-2.5 mb-3">
+      <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-500/20">
+        <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+        </svg>
+      </div>
+      <div class="text-left leading-tight">
+        <p class="text-[13px] font-semibold text-white">FStore Official</p>
+        <p class="text-[9px] font-medium text-blue-400 uppercase tracking-[0.12em]">Security Tools</p>
       </div>
     </div>
-
-    <div class="footer-divider"></div>
-
-    <div class="footer-copy">
-      <span class="highlight">Copyright</span>
-      <span class="symbol">©</span>
-      <span class="highlight">2026 Fstore Official.</span><br>
+    <div class="w-10 h-[2px] bg-gradient-to-r from-transparent via-blue-500 to-transparent mx-auto mb-3 rounded-full opacity-60"></div>
+    <p class="text-[11px] text-zinc-500 leading-relaxed">
+      <span class="text-zinc-400 font-medium">Copyright</span>
+      <span class="text-blue-400 font-bold mx-1">©</span>
+      <span class="text-zinc-400 font-medium">2026 FStore Official.</span><br>
       Seluruh hak cipta dilindungi undang-undang.
-    </div>
-
-    <div class="footer-meta">
-      Authenticator Decoder
-      <span class="dot-sep">•</span>
-      Diproses secara lokal di browser Anda
-      <span class="dot-sep">•</span>
-      Tidak ada data yang dikirim atau disimpan
-    </div>
-  </footer>
-
-</div>
+    </p>
+    <p class="text-[10px] text-zinc-600 mt-2.5 leading-relaxed">
+      QR Decoder <span class="mx-1.5 opacity-50">•</span> Diproses lokal di browser Anda
+    </p>
+  </div>
+</footer>
 
 <script>
 // ============================================================
@@ -1175,23 +463,9 @@
 const protoDef = `
 syntax = "proto3";
 message MigrationPayload {
-  enum Algorithm {
-    ALGORITHM_UNSPECIFIED = 0;
-    SHA1 = 1;
-    SHA256 = 2;
-    SHA512 = 3;
-    MD5 = 4;
-  }
-  enum DigitCount {
-    DIGIT_COUNT_UNSPECIFIED = 0;
-    SIX = 1;
-    EIGHT = 2;
-  }
-  enum OtpType {
-    OTP_TYPE_UNSPECIFIED = 0;
-    HOTP = 1;
-    TOTP = 2;
-  }
+  enum Algorithm { ALGORITHM_UNSPECIFIED = 0; SHA1 = 1; SHA256 = 2; SHA512 = 3; MD5 = 4; }
+  enum DigitCount { DIGIT_COUNT_UNSPECIFIED = 0; SIX = 1; EIGHT = 2; }
+  enum OtpType { OTP_TYPE_UNSPECIFIED = 0; HOTP = 1; TOTP = 2; }
   message OtpParameters {
     bytes secret = 1;
     string name = 2;
@@ -1202,29 +476,19 @@ message MigrationPayload {
     int64 counter = 7;
   }
   repeated OtpParameters otp_parameters = 1;
-  int32 version = 2;
-  int32 batch_size = 3;
-  int32 batch_index = 4;
-  int32 batch_id = 5;
-}
-`;
+  int32 version = 2; int32 batch_size = 3; int32 batch_index = 4; int32 batch_id = 5;
+}`;
 
 let MigrationPayload = null;
 try {
   const root = protobuf.parse(protoDef).root;
   MigrationPayload = root.lookupType("MigrationPayload");
-} catch (e) {
-  console.error("Proto init error:", e);
-}
+} catch (e) { console.error("Proto init error:", e); }
 
 // ============================================================
-// 2. KONFIGURASI
+// 2. CONFIG & UTILITIES
 // ============================================================
 const FSTORE_2FA_BASE = "https://fstore.web.id/2fa/";
-
-// ============================================================
-// 3. UTILITIES
-// ============================================================
 const B32_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
 function bytesToBase32(bytes) {
@@ -1238,78 +502,40 @@ function bytesToBase32(bytes) {
   }
   return result;
 }
-
 function base64ToBytes(b64) {
   const bin = atob(b64.replace(/-/g, "+").replace(/_/g, "/"));
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   return bytes;
 }
-
 function extractDataParam(url) {
-  const match = url.match(/[?&]data=([^&\s]+)/);
-  if (!match) throw new Error("Parameter 'data' tidak ditemukan");
-  return decodeURIComponent(match[1]);
+  const m = url.match(/[?&]data=([^&\s]+)/);
+  if (!m) throw new Error("Parameter 'data' tidak ditemukan");
+  return decodeURIComponent(m[1]);
 }
-
 function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, (c) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-  }[c]));
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 }
-
-function escapeAttr(s) {
-  return String(s).replace(/[&<>"']/g, (c) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-  }[c]));
-}
-
-// Bangun URL lengkap untuk tombol buka 2FA
-function build2FAUrl(secret) {
-  return `${FSTORE_2FA_BASE}?key=${encodeURIComponent(secret)}`;
-}
-
-// Pisahkan URL jadi bagian untuk ditampilkan (host + key)
-function splitUrlForDisplay(url) {
-  try {
-    const u = new URL(url);
-    const key = u.searchParams.get("key") || "";
-    return {
-      host: u.origin + u.pathname,
-      key: key
-    };
-  } catch {
-    return { host: url, key: "" };
-  }
-}
+function escapeAttr(s) { return escapeHtml(s); }
+function build2FAUrl(secret) { return `${FSTORE_2FA_BASE}?key=${encodeURIComponent(secret)}`; }
 
 // ============================================================
-// 4. DECODER
+// 3. DECODER
 // ============================================================
-const ALGO_MAP = { 0: "SHA1", 1: "SHA1", 2: "SHA256", 3: "SHA512", 4: "MD5" };
-const DIGIT_MAP = { 0: 6, 1: 6, 2: 8 };
-const TYPE_MAP = { 0: "TOTP", 1: "HOTP", 2: "TOTP" };
-
 function decodeMigrationUrl(url) {
   url = url.trim();
-  if (!url.startsWith("otpauth-migration://")) {
-    throw new Error("URL bukan format otpauth-migration://");
-  }
+  if (!url.startsWith("otpauth-migration://")) throw new Error("URL bukan format otpauth-migration://");
   const b64 = extractDataParam(url);
   const bytes = base64ToBytes(b64);
   const message = MigrationPayload.decode(bytes);
   const obj = MigrationPayload.toObject(message, { bytes: Uint8Array });
-
   const params = obj.otpParameters || [];
   if (params.length === 0) throw new Error("Tidak ada akun ditemukan");
-
   return params.map((p) => {
     const secretB32 = bytesToBase32(p.secret);
-    const issuer = p.issuer || "";
-    const name = p.name || "";
     return {
-      issuer,
-      name,
+      issuer: p.issuer || "",
+      name: p.name || "",
       secret: secretB32,
       url2fa: build2FAUrl(secretB32)
     };
@@ -1317,22 +543,32 @@ function decodeMigrationUrl(url) {
 }
 
 // ============================================================
-// 5. UI
+// 4. UI HELPERS
 // ============================================================
 const $ = (id) => document.getElementById(id);
 let results = [];
 
 function showStatus(msg, type = "info") {
   const el = $("status");
-  const icon = el.querySelector(".status-icon");
-  const text = $("statusText");
-  text.textContent = msg;
-  el.className = "status show " + type;
-  icon.textContent = type === "success" ? "✓" : type === "error" ? "✕" : "ℹ️";
-  if (type === "success") setTimeout(() => el.classList.remove("show"), 4000);
+  const styles = {
+    info:    "border border-blue-500/25 bg-blue-500/10 text-blue-200",
+    success: "border border-emerald-500/25 bg-emerald-500/10 text-emerald-200",
+    error:   "border border-red-500/25 bg-red-500/10 text-red-200"
+  };
+  el.className = "mt-4 rounded-2xl px-3.5 sm:px-4 py-3 text-[11px] leading-relaxed flex items-start gap-2.5 animate-fade-slide " + (styles[type] || styles.info);
+  const icons = {
+    info:    '<svg class="w-3.5 h-3.5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+    success: '<svg class="w-3.5 h-3.5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>',
+    error:   '<svg class="w-3.5 h-3.5 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>'
+  };
+  el.innerHTML = (icons[type] || icons.info) + `<span>${escapeHtml(msg)}</span>`;
+  if (type === "success") setTimeout(() => el.classList.add("hidden"), 4000);
 }
-function hideStatus() { $("status").classList.remove("show"); }
+function hideStatus() { $("status").classList.add("hidden"); }
 
+// ============================================================
+// 5. RENDER RESULTS
+// ============================================================
 function renderResults(accounts) {
   results = accounts;
   $("accountCount").textContent = accounts.length;
@@ -1341,130 +577,106 @@ function renderResults(accounts) {
   container.innerHTML = "";
 
   accounts.forEach((acc, i) => {
-    const url = acc.url2fa;
-    const display = splitUrlForDisplay(url);
-
     const div = document.createElement("div");
-    div.className = "account";
+    div.className = "rounded-2xl border border-zinc-800/60 bg-zinc-900/30 overflow-hidden animate-fade-slide";
+    div.style.animationDelay = (i * 60) + "ms";
+
     div.innerHTML = `
-      <div class="account-head">
-        <div class="account-identity">
-          <div class="account-name">${escapeHtml(acc.name || "(tanpa nama)")}</div>
-          ${acc.issuer ? `<div class="account-issuer">${escapeHtml(acc.issuer)}</div>` : ""}
+      <!-- Account header -->
+      <div class="flex items-start justify-between gap-2.5 px-3.5 sm:px-4 pt-3.5 sm:pt-4 pb-2.5 sm:pb-3 border-b border-dashed border-zinc-800/80">
+        <div class="min-w-0 flex-1">
+          <p class="account-name text-[12px] sm:text-[13px] font-semibold text-white leading-tight break-words">${escapeHtml(acc.name || "(tanpa nama)")}</p>
+          ${acc.issuer ? `<p class="text-[10px] font-semibold text-blue-400 uppercase tracking-wider mt-0.5 break-words">${escapeHtml(acc.issuer)}</p>` : ""}
         </div>
-        <div class="account-index">#${String(i + 1).padStart(2, "0")}</div>
+        <span class="text-[9px] sm:text-[10px] font-mono text-zinc-600 bg-zinc-800/60 border border-zinc-700/60 rounded-md px-1.5 sm:px-2 py-0.5 sm:py-1 shrink-0">#${String(i+1).padStart(2,"0")}</span>
       </div>
 
-      <!-- Opsi 1: Secret Key -->
-      <div class="option">
-        <div class="option-label secret">
-          <span class="num">1</span>
-          Secret Key
+      <!-- Option 1: Secret Key -->
+      <div class="px-3.5 sm:px-4 pt-3 sm:pt-3.5 pb-2.5 sm:pb-3">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="w-4 h-4 rounded-full bg-amber-500 text-amber-950 text-[9px] font-bold flex items-center justify-center shrink-0">1</span>
+          <span class="text-[10px] font-bold uppercase tracking-[0.12em] text-amber-400">Secret Key</span>
         </div>
-        <div class="secret-block">
-          <div class="secret-value">${escapeHtml(acc.secret)}</div>
-          <button type="button" class="copy-btn" data-copy="${escapeAttr(acc.secret)}">
-            <span>📋</span> Copy
+        <div class="relative rounded-xl border border-amber-500/25 bg-gradient-to-br from-amber-500/[0.07] to-amber-500/[0.02] pl-3 sm:pl-3.5 pr-1.5 sm:pr-2 py-2 sm:py-2.5 flex items-center gap-1.5 sm:gap-2 overflow-hidden">
+          <div class="absolute left-0 top-0 h-full w-[3px] bg-amber-500/70"></div>
+          <code class="secret-value flex-1 font-mono text-[12px] sm:text-[13px] font-semibold text-amber-400 tracking-[0.02em] sm:tracking-[0.04em] break-all leading-snug select-all">${escapeHtml(acc.secret)}</code>
+          <button type="button" class="copy-btn shrink-0 h-9 sm:h-8 px-2.5 sm:px-2.5 rounded-lg bg-zinc-800/80 border border-zinc-700/60 text-zinc-300 hover:text-white hover:border-zinc-600 active:scale-95 active:bg-zinc-700 transition-all flex items-center gap-1.5 text-[10px] font-semibold" data-copy="${escapeAttr(acc.secret)}">
+            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            <span class="hidden xs:inline">Copy</span>
           </button>
         </div>
       </div>
 
-      <!-- Opsi 2: Buka 2FA -->
-      <div class="option">
-        <div class="option-label open">
-          <span class="num">2</span>
-          Buka Halaman 2FA
+      <!-- Option 2: Buka 2FA -->
+      <div class="px-3.5 sm:px-4 pb-3.5 sm:pb-4">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="w-4 h-4 rounded-full bg-blue-500 text-white text-[9px] font-bold flex items-center justify-center shrink-0">2</span>
+          <span class="text-[10px] font-bold uppercase tracking-[0.12em] text-blue-400">Buka Halaman 2FA</span>
         </div>
-        <div class="open-row">
-          <div class="open-url">
-            <span class="host">${escapeHtml(display.host)}</span><span class="key-part">?key=${escapeHtml(display.key)}</span>
+        <a href="${escapeAttr(acc.url2fa)}" target="_blank" rel="noopener noreferrer" class="group flex items-center gap-2 sm:gap-3 rounded-xl border border-zinc-800/60 bg-zinc-950/60 pl-3 sm:pl-3.5 pr-1.5 sm:pr-2 py-1.5 sm:py-2 hover:border-blue-500/40 hover:bg-blue-500/[0.04] active:border-blue-500/40 active:bg-blue-500/[0.04] transition-all">
+          <div class="flex-1 min-w-0">
+            <p class="url-text font-mono text-[10px] text-zinc-500 truncate">
+              <span class="text-blue-400 font-semibold">fstore.web.id/2fa/</span><span class="text-amber-400 font-semibold">?key=${escapeHtml(acc.secret)}</span>
+            </p>
           </div>
-          <a class="btn-open" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">
-            <span>Buka</span>
-            <span class="arrow">→</span>
-          </a>
-        </div>
+          <span class="shrink-0 h-9 sm:h-8 px-3 sm:px-3 rounded-lg bg-blue-500 text-white text-[10px] font-semibold flex items-center gap-1.5 group-hover:bg-blue-600 transition-all shadow-lg shadow-blue-500/20">
+            Buka
+            <svg class="w-3 h-3 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+          </span>
+        </a>
       </div>
     `;
     container.appendChild(div);
   });
 
-  // Bind tombol copy
   container.querySelectorAll(".copy-btn").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      handleCopyClick(btn);
-    });
+    btn.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); handleCopyClick(btn); });
   });
 
-  $("resultCard").scrollIntoView({ behavior: "smooth", block: "start" });
+  // Scroll ke hasil (dengan delay kecil agar DOM selesai render)
+  setTimeout(() => {
+    $("resultCard").scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 100);
 }
 
 // ============================================================
-// 6. COPY SYSTEM
+// 6. COPY
 // ============================================================
 async function copyToClipboard(text) {
-  // Metode 1: Clipboard API
   if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
-    try {
-      await navigator.clipboard.writeText(text);
-      return true;
-    } catch (err) {
-      console.warn("Clipboard API gagal, coba fallback:", err);
-    }
+    try { await navigator.clipboard.writeText(text); return true; }
+    catch (err) { console.warn("Clipboard API gagal:", err); }
   }
-
-  // Metode 2: execCommand fallback
   try {
     const ta = document.createElement("textarea");
     ta.value = text;
     ta.setAttribute("readonly", "");
     ta.style.cssText = "position:fixed;top:0;left:0;width:2em;height:2em;padding:0;border:none;outline:none;box-shadow:none;background:transparent;opacity:0;font-size:16px;";
     document.body.appendChild(ta);
-    ta.focus();
-    ta.select();
-    ta.setSelectionRange(0, ta.value.length);
+    ta.focus(); ta.select(); ta.setSelectionRange(0, ta.value.length);
     const ok = document.execCommand("copy");
     document.body.removeChild(ta);
     if (ok) return true;
-  } catch (err) {
-    console.warn("execCommand gagal:", err);
-  }
-
-  // Metode 3: prompt manual
-  try {
-    window.prompt("Salin manual (Ctrl+C / Cmd+C):", text);
-    return true;
-  } catch {
-    return false;
-  }
+  } catch (err) { console.warn("execCommand gagal:", err); }
+  try { window.prompt("Salin manual (Ctrl+C / Cmd+C):", text); return true; }
+  catch { return false; }
 }
 
 async function handleCopyClick(btn) {
   const text = btn.dataset.copy || "";
-  if (!text) {
-    showStatus("Tidak ada data untuk dicopy", "error");
-    return;
-  }
-
+  if (!text) { showStatus("Tidak ada data untuk dicopy", "error"); return; }
   const originalHTML = btn.innerHTML;
   btn.disabled = true;
-
   const success = await copyToClipboard(text);
-
   if (success) {
-    btn.innerHTML = "<span>✓</span> Tersalin";
-    btn.classList.add("copied");
-    setTimeout(() => {
-      btn.innerHTML = originalHTML;
-      btn.classList.remove("copied");
-      btn.disabled = false;
-    }, 1500);
+    btn.innerHTML = `<svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`;
+    btn.classList.add("copy-success");
+    // Getaran halus di mobile (jika didukung)
+    if (navigator.vibrate) navigator.vibrate(15);
+    setTimeout(() => { btn.innerHTML = originalHTML; btn.classList.remove("copy-success"); btn.disabled = false; }, 1500);
   } else {
-    btn.innerHTML = originalHTML;
-    btn.disabled = false;
-    showStatus("Gagal menyalin. Pilih teks secara manual lalu copy.", "error");
+    btn.innerHTML = originalHTML; btn.disabled = false;
+    showStatus("Gagal menyalin. Pilih teks secara manual.", "error");
   }
 }
 
@@ -1473,124 +685,98 @@ async function handleCopyClick(btn) {
 // ============================================================
 document.querySelectorAll(".tab").forEach((tab) => {
   tab.addEventListener("click", () => {
-    document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
-    document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
-    tab.classList.add("active");
-    $("panel-" + tab.dataset.tab).classList.add("active");
+    document.querySelectorAll(".tab").forEach((t) => {
+      t.classList.remove("active","bg-zinc-800/80","text-white","shadow-sm");
+      t.classList.add("text-zinc-400");
+    });
+    document.querySelectorAll(".panel").forEach((p) => { p.classList.add("hidden"); p.classList.remove("active"); });
+    tab.classList.add("active","bg-zinc-800/80","text-white","shadow-sm");
+    tab.classList.remove("text-zinc-400");
+    const panel = $("panel-" + tab.dataset.tab);
+    panel.classList.remove("hidden"); panel.classList.add("active");
     if (tab.dataset.tab !== "camera") stopCamera();
+    // Getaran halus saat ganti tab
+    if (navigator.vibrate) navigator.vibrate(8);
   });
 });
 
 // ============================================================
 // 8. CAMERA
 // ============================================================
-let stream = null;
-let scanTimer = null;
+let stream = null, scanTimer = null;
 
 async function startCamera() {
   try {
     hideStatus();
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      throw new Error("Browser tidak mendukung akses kamera");
-    }
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: "environment" } },
-      audio: false
-    });
+    if (!navigator.mediaDevices?.getUserMedia) throw new Error("Browser tidak mendukung akses kamera");
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
     const video = $("video");
     video.srcObject = stream;
+    video.setAttribute("playsinline", "true"); // penting untuk iOS
+    video.setAttribute("webkit-playsinline", "true");
     await video.play();
     $("camPlaceholder").classList.add("hidden");
     $("scanOverlay").classList.remove("hidden");
-    $("startCam").disabled = true;
-    $("stopCam").disabled = false;
+    $("startCam").disabled = true; $("stopCam").disabled = false;
     showStatus("Arahkan kamera ke kode QR...", "info");
     scanTimer = setInterval(scanFrame, 450);
   } catch (err) {
     let msg = err.message;
-    if (err.name === "NotAllowedError") msg = "Izin kamera ditolak";
+    if (err.name === "NotAllowedError") msg = "Izin kamera ditolak. Izinkan akses kamera di pengaturan browser.";
     else if (err.name === "NotFoundError") msg = "Kamera tidak ditemukan";
+    else if (err.name === "NotReadableError") msg = "Kamera sedang dipakai aplikasi lain";
     showStatus("Gagal: " + msg, "error");
   }
 }
-
 function stopCamera() {
   if (scanTimer) { clearInterval(scanTimer); scanTimer = null; }
-  if (stream) {
-    stream.getTracks().forEach((t) => t.stop());
-    stream = null;
-  }
+  if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }
   $("camPlaceholder").classList.remove("hidden");
   $("scanOverlay").classList.add("hidden");
-  $("startCam").disabled = false;
-  $("stopCam").disabled = true;
+  $("startCam").disabled = false; $("stopCam").disabled = true;
 }
-
 function scanFrame() {
-  const video = $("video");
-  if (!video.videoWidth) return;
+  const video = $("video"); if (!video.videoWidth) return;
   const canvas = $("canvas");
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
+  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
   const ctx = canvas.getContext("2d", { willReadFrequently: true });
   ctx.drawImage(video, 0, 0);
   const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const code = jsQR(imgData.data, imgData.width, imgData.height);
   if (code && code.data) {
+    if (navigator.vibrate) navigator.vibrate([30, 50, 30]); // pattern scan berhasil
     handleDecodedUrl(code.data);
     stopCamera();
   }
 }
-
 $("startCam").addEventListener("click", startCamera);
-$("stopCam").addEventListener("click", () => {
-  stopCamera();
-  hideStatus();
-});
+$("stopCam").addEventListener("click", () => { stopCamera(); hideStatus(); });
 
 // ============================================================
 // 9. UPLOAD
 // ============================================================
-const dropZone = $("dropZone");
-const fileInput = $("fileInput");
-
+const dropZone = $("dropZone"), fileInput = $("fileInput");
 dropZone.addEventListener("click", () => fileInput.click());
-dropZone.addEventListener("dragover", (e) => {
-  e.preventDefault();
-  dropZone.classList.add("dragover");
-});
+dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("dragover"); });
 dropZone.addEventListener("dragleave", () => dropZone.classList.remove("dragover"));
-dropZone.addEventListener("drop", (e) => {
-  e.preventDefault();
-  dropZone.classList.remove("dragover");
-  if (e.dataTransfer.files[0]) processImage(e.dataTransfer.files[0]);
-});
-fileInput.addEventListener("change", (e) => {
-  if (e.target.files[0]) processImage(e.target.files[0]);
-});
+dropZone.addEventListener("drop", (e) => { e.preventDefault(); dropZone.classList.remove("dragover"); if (e.dataTransfer.files[0]) processImage(e.dataTransfer.files[0]); });
+fileInput.addEventListener("change", (e) => { if (e.target.files[0]) processImage(e.target.files[0]); });
 
 function processImage(file) {
-  hideStatus();
-  showStatus("Membaca gambar...", "info");
+  hideStatus(); showStatus("Membaca gambar...", "info");
   const reader = new FileReader();
   reader.onload = (e) => {
     const img = new Image();
     img.onload = () => {
       const canvas = $("canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
+      canvas.width = img.width; canvas.height = img.height;
       const ctx = canvas.getContext("2d", { willReadFrequently: true });
       ctx.drawImage(img, 0, 0);
       const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       let code = jsQR(imgData.data, imgData.width, imgData.height);
-      if (!code) {
-        code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: "attemptBoth" });
-      }
-      if (code && code.data) {
-        handleDecodedUrl(code.data);
-      } else {
-        showStatus("QR tidak terdeteksi. Coba gambar yang lebih jelas.", "error");
-      }
+      if (!code) code = jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: "attemptBoth" });
+      if (code && code.data) handleDecodedUrl(code.data);
+      else showStatus("QR tidak terdeteksi. Coba gambar yang lebih jelas.", "error");
     };
     img.onerror = () => showStatus("Gagal membaca file gambar", "error");
     img.src = e.target.result;
@@ -1604,6 +790,8 @@ function processImage(file) {
 $("decodeManual").addEventListener("click", () => {
   const val = $("manualInput").value.trim();
   if (!val) { showStatus("Input masih kosong", "error"); return; }
+  // Blur input agar keyboard mobile tertutup
+  $("manualInput").blur();
   handleDecodedUrl(val);
 });
 
@@ -1615,38 +803,18 @@ function handleDecodedUrl(url) {
     const accounts = decodeMigrationUrl(url);
     showStatus(`Berhasil decode ${accounts.length} akun`, "success");
     renderResults(accounts);
-  } catch (err) {
-    showStatus("Gagal decode: " + err.message, "error");
-  }
+  } catch (err) { showStatus("Gagal decode: " + err.message, "error"); }
 }
 
 // ============================================================
 // 12. ACTIONS
 // ============================================================
 $("copyAll").addEventListener("click", async () => {
-  if (!results.length) {
-    showStatus("Belum ada data untuk dicopy", "error");
-    return;
-  }
-  const text = results.map((r) =>
-    `${r.issuer ? r.issuer + " - " : ""}${r.name}\nSecret: ${r.secret}\nURL: ${r.url2fa}`
-  ).join("\n\n");
-
+  if (!results.length) { showStatus("Belum ada data untuk dicopy", "error"); return; }
+  const text = results.map((r) => `${r.issuer ? r.issuer + " - " : ""}${r.name}\nSecret: ${r.secret}\nURL: ${r.url2fa}`).join("\n\n");
   const ok = await copyToClipboard(text);
-  if (ok) {
-    showStatus("Semua data berhasil dicopy ke clipboard", "success");
-  } else {
-    showStatus("Gagal copy. Coba satu per satu.", "error");
-  }
-});
-
-$("downloadJson").addEventListener("click", () => {
-  const blob = new Blob([JSON.stringify(results, null, 2)], { type: "application/json" });
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = `authenticator-export-${Date.now()}.json`;
-  a.click();
-  URL.revokeObjectURL(a.href);
+  if (ok && navigator.vibrate) navigator.vibrate(15);
+  showStatus(ok ? "Semua data berhasil dicopy" : "Gagal copy", ok ? "success" : "error");
 });
 
 $("clearAll").addEventListener("click", () => {
@@ -1656,6 +824,40 @@ $("clearAll").addEventListener("click", () => {
   hideStatus();
   $("manualInput").value = "";
   fileInput.value = "";
+  if (navigator.vibrate) navigator.vibrate(8);
+});
+
+// ============================================================
+// 13. MOBILE ENHANCEMENTS
+// ============================================================
+// Cegah pull-to-refresh saat scroll di area utama (bisa mengganggu saat scan)
+let touchStartY = 0;
+document.addEventListener("touchstart", (e) => {
+  touchStartY = e.touches[0].clientY;
+}, { passive: true });
+
+// Auto-scroll ke input saat fokus di mobile (keyboard terbuka)
+document.querySelectorAll("textarea, input").forEach((el) => {
+  el.addEventListener("focus", () => {
+    setTimeout(() => {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 300);
+  });
+});
+
+// Handle visibilitas (jeda kamera saat tab browser tidak aktif)
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && stream) {
+    stopCamera();
+  }
+});
+
+// Handle back button gesture Android agar tidak keluar
+window.addEventListener("popstate", () => {
+  if (stream) {
+    stopCamera();
+    hideStatus();
+  }
 });
 </script>
 </body>
