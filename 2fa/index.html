@@ -2,299 +2,484 @@
 <html lang="id" class="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Authenticator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#09090b">
+  <title>Authenticator — FStore Official</title>
+
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
   <style>
     :root {
       --bg-body: #09090b;
-      --card-bg: #18181b;
       --border: #27272a;
     }
-    
+
+    html { -webkit-text-size-adjust: 100%; }
     body {
-      font-family: 'Inter', sans-serif;
       background-color: var(--bg-body);
       color: #fafafa;
       -webkit-font-smoothing: antialiased;
-    }
-    
-    .font-mono { font-family: 'JetBrains Mono', monospace; }
-    
-    .clean-input {
-      background: transparent;
-      border: 1px solid var(--border);
-      color: white;
-      transition: all 0.2s ease;
-    }
-    .clean-input:focus {
-      border-color: #52525b;
-      outline: none;
-      background: #18181b;
-    }
-    .clean-input.error {
-      border-color: #ef4444;
-      box-shadow: 0 0 0 1px #ef4444;
+      -webkit-tap-highlight-color: transparent;
+      overscroll-behavior-y: none;
     }
 
-    .glass-panel {
+    /* Cegah zoom otomatis di iOS saat fokus input */
+    input, button, summary { font-size: 16px; }
+
+    /* ============ Input ============ */
+    .field {
       background: rgba(24, 24, 27, 0.6);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border);
+      color: #fff;
+      transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+    }
+    .field:focus {
+      border-color: #52525b;
+      background: #18181b;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(255,255,255,0.05);
+    }
+    .field.error {
+      border-color: #ef4444;
+      box-shadow: 0 0 0 3px rgba(239,68,68,0.15);
     }
 
+    /* ============ Card ============ */
+    .card {
+      background: linear-gradient(180deg, rgba(24,24,27,0.75) 0%, rgba(9,9,11,0.6) 100%);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.06);
+      box-shadow:
+        0 1px 0 0 rgba(255,255,255,0.04) inset,
+        0 20px 40px -20px rgba(0,0,0,0.8);
+    }
+
+    /* ============ Ring animation ============ */
+    #progress-ring {
+      transition: stroke-dashoffset 0.5s linear, stroke 0.3s ease;
+    }
+
+    /* ============ Code text ============ */
     #code {
-      transition: opacity 0.15s ease, transform 0.15s ease;
+      transition: opacity .18s ease, transform .18s ease, color .3s ease;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.08em;
     }
 
-    @keyframes slideIn {
-        from { transform: translateY(100%); opacity: 0; }
-        to { transform: translateY(0); opacity: 1; }
+    /* ============ Toast ============ */
+    @keyframes toastIn {
+      from { transform: translateY(-12px) scale(0.96); opacity: 0; }
+      to   { transform: translateY(0) scale(1); opacity: 1; }
     }
-    @keyframes slideOut {
-        from { transform: translateY(0); opacity: 1; }
-        to { transform: translateY(100%); opacity: 0; }
+    @keyframes toastOut {
+      from { transform: translateY(0) scale(1); opacity: 1; }
+      to   { transform: translateY(-8px) scale(0.98); opacity: 0; }
     }
-    .toast-enter { animation: slideIn 0.3s forwards; }
-    .toast-exit { animation: slideOut 0.3s forwards; }
+    .toast-enter { animation: toastIn .28s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+    .toast-exit  { animation: toastOut .22s ease forwards; }
 
-    /* Dropdown menu animation */
-    .menu-enter {
-      animation: fadeIn 0.2s ease forwards;
+    /* ============ Menu ============ */
+    #menu-overlay { pointer-events: none; }
+    #menu-overlay[data-open="true"] { pointer-events: auto; }
+
+    #menu-backdrop {
+      opacity: 0;
+      transition: opacity .25s ease;
     }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-8px); }
-      to { opacity: 1; transform: translateY(0); }
+    #menu-overlay[data-open="true"] #menu-backdrop { opacity: 1; }
+
+    #menu-panel {
+      transform: translateY(100%);
+      opacity: 0;
+      transition: transform .35s cubic-bezier(.32,.72,0,1), opacity .25s ease;
+      padding-bottom: env(safe-area-inset-bottom, 0);
+    }
+    #menu-overlay[data-open="true"] #menu-panel {
+      transform: translateY(0);
+      opacity: 1;
     }
 
-    /* Custom scroll for menu if needed */
-    .menu-scroll {
-      max-height: calc(100vh - 100px);
-      overflow-y: auto;
+    /* Desktop: panel jadi dropdown, bukan bottom sheet */
+    @media (min-width: 640px) {
+      #menu-panel {
+        transform: translateY(-6px) scale(0.98);
+        transform-origin: top right;
+      }
+      #menu-overlay[data-open="true"] #menu-panel {
+        transform: translateY(0) scale(1);
+      }
     }
+
+    /* ============ Details marker hide ============ */
+    summary { list-style: none; }
+    summary::-webkit-details-marker { display: none; }
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important;
+        transition-duration: .01ms !important;
+      }
+    }
+
+    /* Ring rotation wrapper supaya start dari atas */
+    .ring-rotate { transform: rotate(-90deg); transform-origin: center; }
   </style>
 </head>
-<body class="min-h-screen w-full flex flex-col items-center justify-center p-4 selection:bg-white/20">
 
-  <main class="w-full max-w-sm flex flex-col gap-6 relative">
-    
-    <!-- Header redesigned: logo kiri besar (tanpa kotak), hamburger kanan, judul di bawah -->
-    <header class="w-full">
-      <!-- Top bar with logo and hamburger -->
-      <div class="flex items-center justify-between mb-4">
-        <!-- Logo besar di kiri - TANPA CONTAINER -->
-        <img src="logo.png" alt="Authenticator Logo" class="w-16 h-16 object-contain">
-        
-        <!-- Hamburger button -->
-        <button id="menu-btn" class="p-2 text-zinc-400 hover:text-white transition-colors" aria-label="Menu">
-          <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-      </div>
+<body class="min-h-[100dvh] w-full flex flex-col font-sans antialiased">
 
-      <!-- Title and subtitle (tetap di tengah) -->
-      <div class="text-center space-y-1 mb-2">
-        <h1 class="text-xl font-semibold text-white tracking-tight">Authenticator</h1>
-        <p class="text-sm text-zinc-500">FStore Official - Secure Client-Side 2FA</p>
-      </div>
-
-      <!-- Dropdown menu profesional -->
-      <div id="menu-dropdown" class="hidden absolute right-0 mt-2 w-64 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl overflow-hidden z-50 menu-scroll">
-        <div class="py-2">
-          <!-- Header menu -->
-          <div class="px-4 py-2 text-xs font-semibold text-zinc-400 uppercase tracking-wider border-b border-zinc-800">Menu</div>
-          
-          <!-- Toko FStore - Link ke /toko -->
-          <a href="/toko" class="flex items-center gap-3 px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">
-            <svg class="w-5 h-5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-            </svg>
-            <span>Toko FStore</span>
-          </a>
-          
-          <!-- FStore Mail - Link ke root folder -->
-          <a href="/" class="flex items-center gap-3 px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">
-            <svg class="w-5 h-5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-            <span>FStore Mail</span>
-          </a>
-
-          <!-- Divider dengan label Sosial Media -->
-          <div class="relative my-2">
-            <div class="absolute inset-0 flex items-center px-4">
-              <div class="w-full border-t border-zinc-800"></div>
-            </div>
-            <div class="relative flex justify-start px-4">
-              <span class="bg-zinc-900 pr-2 text-xs text-zinc-500">Sosial Media</span>
-            </div>
-          </div>
-
-          <!-- WhatsApp -->
-          <a href="https://wa.me/6285133334542" target="_blank" class="flex items-center gap-3 px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">
-            <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-            </svg>
-            <span>WhatsApp</span>
-          </a>
-
-          <!-- Twitter -->
-          <a href="https://x.com/F_StoreOfficial" target="_blank" class="flex items-center gap-3 px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-800 hover:text-white transition-colors">
-            <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z" />
-            </svg>
-            <span>Twitter (X)</span>
-          </a>
-
-          <!-- Instagram (Coming Soon) -->
-          <div class="flex items-center gap-3 px-4 py-3 text-sm text-zinc-500 cursor-default">
-            <svg class="w-5 h-5 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <rect x="2" y="2" width="20" height="20" rx="5" ry="5" stroke-width="2" />
-              <circle cx="12" cy="12" r="3" stroke-width="2" />
-              <circle cx="18" cy="6" r="1" fill="currentColor" />
-            </svg>
-            <span>Instagram</span>
-            <span class="ml-auto text-[10px] font-medium text-zinc-600 bg-zinc-800 px-1.5 py-0.5 rounded-full">Soon</span>
-          </div>
-
-          <!-- Facebook (Coming Soon) -->
-          <div class="flex items-center gap-3 px-4 py-3 text-sm text-zinc-500 cursor-default">
-            <svg class="w-5 h-5 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" />
-            </svg>
-            <span>Facebook</span>
-            <span class="ml-auto text-[10px] font-medium text-zinc-600 bg-zinc-800 px-1.5 py-0.5 rounded-full">Soon</span>
-          </div>
+  <!-- ===================== HEADER ===================== -->
+  <header class="sticky top-0 z-40 backdrop-blur-xl bg-zinc-950/70 border-b border-zinc-900/80">
+    <div class="max-w-md mx-auto w-full px-5 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3 min-w-0">
+        <img src="logo.png" alt="FStore" class="w-9 h-9 object-contain shrink-0">
+        <div class="min-w-0">
+          <h1 class="text-sm font-semibold text-white leading-tight truncate">Authenticator</h1>
+          <p class="text-[10px] text-zinc-500 leading-tight truncate">FStore Official</p>
         </div>
       </div>
-    </header>
 
-    <!-- Main authenticator panel -->
-    <div class="glass-panel rounded-2xl p-8 relative overflow-hidden group shadow-2xl shadow-black/50">
-      
-      <div id="copy-feedback" class="absolute inset-0 z-20 flex items-center justify-center bg-zinc-900/90 backdrop-blur-sm transition-all duration-200 opacity-0 pointer-events-none">
+      <button id="menu-btn" type="button"
+              class="w-10 h-10 -mr-2 rounded-full flex items-center justify-center text-zinc-400 hover:text-white hover:bg-zinc-900 active:scale-95 transition-all"
+              aria-label="Buka menu">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M4 12h16M4 17h16" />
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ===================== MAIN ===================== -->
+  <main class="flex-1 w-full max-w-md mx-auto px-5 pt-6 pb-[calc(env(safe-area-inset-bottom,0px)+2rem)]">
+
+    <!-- ============ CODE CARD ============ -->
+    <section class="card rounded-3xl p-6 relative overflow-hidden">
+
+      <!-- Copy feedback overlay -->
+      <div id="copy-feedback"
+           class="absolute inset-0 z-20 rounded-3xl flex items-center justify-center bg-zinc-950/85 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200">
         <div class="flex flex-col items-center gap-2">
-          <svg class="w-8 h-8 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-          <span class="text-sm font-medium text-zinc-200">Code Copied</span>
+          <div class="w-11 h-11 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center">
+            <svg class="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <span class="text-xs font-medium text-zinc-300">Kode tersalin</span>
         </div>
       </div>
 
-      <div class="flex flex-col items-center justify-center space-y-8 cursor-pointer" onclick="copyCode()" title="Klik untuk menyalin kode">
-        <div class="relative">
-          <div id="code" class="text-4xl sm:text-5xl font-mono font-medium text-white tracking-[0.15em] tabular-nums select-none">
-            ------
-          </div>
-        </div>
+      <!-- Code + Ring -->
+      <button type="button" onclick="copyCode()"
+              class="block w-full group"
+              aria-label="Salin kode 6 digit">
+        <div class="relative w-56 h-56 sm:w-64 sm:h-64 mx-auto">
 
-        <div class="w-full space-y-3">
-          <div class="flex justify-between text-xs font-medium text-zinc-500 uppercase tracking-wider">
-            <span>Refresh in</span>
-            <span id="timer-sec" class="font-mono text-zinc-400">30s</span>
-          </div>
-          <div class="h-1 w-full bg-zinc-800/50 rounded-full overflow-hidden">
-            <div id="progress-bar" class="h-full bg-white rounded-full w-full"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="space-y-4">
-      
-      <!-- Input dengan icon hapus (X) dan error icon -->
-      <div class="relative group">
-        <!-- Secret key selalu terlihat (type="text") -->
-        <input id="secret" type="text" placeholder="Paste Secret Key" 
-               class="w-full clean-input rounded-xl pl-4 pr-14 py-3 text-sm font-mono placeholder-zinc-600 bg-zinc-900/50 focus:bg-zinc-900">
-        
-        <!-- Ikon error (segitiga seru) -->
-        <div id="error-icon" class="absolute right-8 top-1/2 -translate-y-1/2 hidden text-red-500" title="Secret tidak valid">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          <!-- SVG Ring -->
+          <svg class="w-full h-full ring-rotate" viewBox="0 0 100 100" fill="none">
+            <circle cx="50" cy="50" r="46" stroke-width="1.5" class="stroke-zinc-800/80" />
+            <circle id="progress-ring"
+                    cx="50" cy="50" r="46"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    class="stroke-white"
+                    stroke-dasharray="289"
+                    stroke-dashoffset="0" />
           </svg>
-        </div>
 
-        <!-- Ikon hapus (X) -->
-        <button id="clear-btn" onclick="clearSecret()" class="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-zinc-600 hover:text-zinc-300 transition-colors" title="Hapus secret" aria-label="Hapus secret">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          <!-- Center content -->
+          <div class="absolute inset-0 flex flex-col items-center justify-center gap-1 select-none">
+            <span class="text-[10px] uppercase tracking-[0.25em] text-zinc-500 font-medium">Your Code</span>
+            <div id="code" class="font-mono text-4xl sm:text-5xl font-medium text-white tabular-nums">
+              ------
+            </div>
+            <span class="text-[10px] uppercase tracking-[0.15em] text-zinc-600 font-medium mt-1">
+              Tap untuk salin
+            </span>
+          </div>
+        </div>
+      </button>
+
+      <!-- Footer di dalam card -->
+      <div class="mt-5 flex items-center justify-center gap-1.5 text-[11px] text-zinc-500">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span>Refresh dalam</span>
+        <span id="timer-sec" class="font-mono text-zinc-300 tabular-nums">30s</span>
+      </div>
+    </section>
+
+    <!-- ============ INPUT ============ -->
+    <section class="mt-5">
+      <label for="secret" class="block text-[11px] uppercase tracking-wider text-zinc-500 font-medium mb-2 px-1">
+        Secret Key
+      </label>
+
+      <div class="relative">
+        <input id="secret" type="text" placeholder="Paste atau ketik secret key"
+               autocomplete="off" autocorrect="off" autocapitalize="characters"
+               spellcheck="false" inputmode="text"
+               class="field w-full h-14 rounded-2xl pl-4 pr-20 font-mono text-sm tracking-wider placeholder:text-zinc-600 placeholder:font-sans placeholder:tracking-normal placeholder:text-[13px]">
+
+        <!-- Ikon di kanan input -->
+        <div class="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+          <div id="error-icon" class="hidden w-8 h-8 flex items-center justify-center text-red-500" title="Secret tidak valid">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+
+          <button id="clear-btn" type="button" onclick="clearSecret()"
+                  class="w-10 h-10 rounded-full flex items-center justify-center text-zinc-600 hover:text-zinc-200 hover:bg-zinc-800/50 active:scale-95 transition-all"
+                  aria-label="Hapus secret" title="Hapus secret">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <p id="secret-error" class="hidden text-[11px] text-red-400 px-2 mt-2 leading-relaxed">
+        Secret key tidak valid. Gunakan hanya huruf A–Z dan angka 2–7 (spasi diabaikan).
+      </p>
+    </section>
+
+    <!-- ============ ACTIONS ============ -->
+    <section class="mt-4 grid grid-cols-2 gap-3">
+      <button type="button" onclick="copyShareLink()"
+              class="h-12 rounded-2xl bg-white text-black font-semibold text-[13px] flex items-center justify-center gap-2 hover:bg-zinc-200 active:scale-[0.97] transition-all">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+        </svg>
+        Share Key
+      </button>
+
+      <a href="https://wa.me/6285133334542" target="_blank" rel="noopener noreferrer"
+         class="h-12 rounded-2xl bg-zinc-900/60 border border-zinc-800 text-zinc-300 font-semibold text-[13px] flex items-center justify-center gap-2 hover:text-white hover:border-zinc-700 hover:bg-zinc-900 active:scale-[0.97] transition-all">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+        Support
+      </a>
+    </section>
+
+    <!-- ============ GUIDE (collapsible) ============ -->
+    <details class="group mt-6 rounded-2xl border border-zinc-800/60 bg-zinc-900/30 overflow-hidden">
+      <summary class="flex items-center justify-between gap-3 px-4 py-3.5 cursor-pointer select-none active:bg-zinc-900/60 transition-colors">
+        <div class="flex items-center gap-2.5">
+          <svg class="w-4 h-4 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-        </button>
-      </div>
-      
-      <div id="secret-error" class="text-xs text-red-400 px-2 hidden">Karakter tidak valid dalam secret key. Hanya huruf A-Z dan angka 2-7 yang diperbolehkan.</div>
+          <span class="text-[13px] font-medium text-zinc-300">Panduan Penggunaan</span>
+        </div>
+        <svg class="w-4 h-4 text-zinc-500 transition-transform duration-300 group-open:rotate-180 shrink-0"
+             fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </summary>
 
-      <div class="grid grid-cols-2 gap-3">
-        <button onclick="copyShareLink()" class="flex items-center justify-center gap-2 px-4 py-3 bg-white text-black hover:bg-zinc-200 rounded-xl text-xs font-semibold transition-colors" aria-label="Salin link berbagi">
-           <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
-           Share Key
-        </button>
-        <a href="https://wa.me/6285133334542" target="_blank" class="flex items-center justify-center gap-2 px-4 py-3 bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white hover:border-zinc-600 rounded-xl text-xs font-semibold transition-all" aria-label="Hubungi dukungan">
-          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-          Support
-        </a>
-      </div>
-    </div>
+      <div class="px-4 pb-4 pt-1 space-y-4 border-t border-zinc-800/60">
 
-    <div id="usage-guide" class="mt-8 pt-4 pb-2 space-y-5">
-        <h2 class="text-base font-semibold text-zinc-400 border-b border-zinc-800 pb-2 mb-4 tracking-wider uppercase">PANDUAN PENGGUNAAN</h2>
-        
-        <div class="flex gap-4">
-            <div class="w-6 h-6 flex-shrink-0 flex items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold border border-emerald-500/30">1</div>
-            <div class="flex-grow space-y-1">
-                <p class="font-semibold text-sm text-white">Metode Paling Mudah (Via Link)</p>
-                <p class="text-xs text-zinc-500">
-                    Jika Anda menerima **Link Akses Penuh** dari Admin/CS (misalnya: <code class="text-blue-400">https://2fa-fstore.netlify.app/?key=HENCEU7BER3UM</code>), cukup **buka link tersebut**.
-                    <br class="hidden sm:inline-block">Secret Key akan otomatis terisi, dan kode 2FA akan langsung muncul. **Klik kode 6 digit** untuk menyalin.
-                </p>
-            </div>
+        <div class="flex gap-3 pt-3">
+          <div class="w-6 h-6 shrink-0 flex items-center justify-center rounded-full bg-emerald-500/10 text-emerald-400 text-[11px] font-bold border border-emerald-500/25">1</div>
+          <div class="min-w-0">
+            <p class="text-[13px] font-medium text-white mb-1">Via Link Akses</p>
+            <p class="text-[12px] text-zinc-500 leading-relaxed">
+              Jika menerima <span class="text-zinc-300 font-medium">Link Akses Penuh</span> dari Admin/CS, cukup buka link tersebut. Secret akan otomatis terisi dan kode langsung muncul.
+            </p>
+          </div>
         </div>
-        
-        <div class="flex gap-4">
-            <div class="w-6 h-6 flex-shrink-0 flex items-center justify-center rounded-full bg-blue-500/10 text-blue-400 text-xs font-bold border border-blue-500/30">2</div>
-            <div class="flex-grow space-y-1">
-                <p class="font-semibold text-sm text-white">Input Kunci Secara Manual</p>
-                <p class="text-xs text-zinc-500">
-                    Jika Anda hanya menerima Secret Key berupa teks, tempelkan (**Paste**) kunci tersebut ke kolom input di atas. 
-                    <br class="hidden sm:inline-block">Kode 2FA akan muncul dan diperbarui otomatis. Kunci Anda tersimpan aman secara lokal di *browser*.
-                </p>
-            </div>
+
+        <div class="flex gap-3">
+          <div class="w-6 h-6 shrink-0 flex items-center justify-center rounded-full bg-blue-500/10 text-blue-400 text-[11px] font-bold border border-blue-500/25">2</div>
+          <div class="min-w-0">
+            <p class="text-[13px] font-medium text-white mb-1">Input Manual</p>
+            <p class="text-[12px] text-zinc-500 leading-relaxed">
+              Punya secret key dalam bentuk teks? Tempelkan ke kolom di atas. Kode akan muncul dan diperbarui otomatis setiap 30 detik.
+            </p>
+          </div>
         </div>
-        
-        <div class="flex gap-4">
-            <div class="w-6 h-6 flex-shrink-0 flex items-center justify-center rounded-full bg-yellow-500/10 text-yellow-400 text-xs font-bold border border-yellow-500/30">3</div>
-            <div class="flex-grow space-y-1">
-                <p class="font-semibold text-sm text-white">Membuat Link Akses Cepat</p>
-                <p class="text-xs text-zinc-500">
-                    Masukkan Secret Key pada kolom input, lalu klik tombol **"Share Key"**. Link akses penuh akan **langsung tersalin** ke *clipboard* dan siap dibagikan kepada pengguna.
-                </p>
-            </div>
+
+        <div class="flex gap-3">
+          <div class="w-6 h-6 shrink-0 flex items-center justify-center rounded-full bg-amber-500/10 text-amber-400 text-[11px] font-bold border border-amber-500/25">3</div>
+          <div class="min-w-0">
+            <p class="text-[13px] font-medium text-white mb-1">Membuat Link Akses</p>
+            <p class="text-[12px] text-zinc-500 leading-relaxed">
+              Masukkan secret key, lalu tekan <span class="text-zinc-300 font-medium">Share Key</span>. Link akan langsung tersalin dan siap dibagikan.
+            </p>
+          </div>
         </div>
-    </div>
+
+      </div>
+    </details>
+
+    <!-- ============ FOOTER ============ -->
     <footer class="mt-8 text-center">
-      <p class="text-[10px] text-zinc-700 font-medium">Copyright &copy; 2023 FStore Official. All Rights Reserved.</p>
+      <p class="text-[10px] text-zinc-600 font-medium tracking-wide">
+        &copy; 2025 FStore Official
+      </p>
+      <p class="text-[10px] text-zinc-700 mt-1">
+        Client-side 2FA · Data tersimpan lokal
+      </p>
     </footer>
-
   </main>
-  
-  <div id="toast-container" class="fixed bottom-4 w-full flex justify-center p-4 pointer-events-none">
+
+  <!-- ===================== MENU OVERLAY ===================== -->
+  <div id="menu-overlay" data-open="false" class="fixed inset-0 z-[60] hidden">
+    <!-- Backdrop -->
+    <div id="menu-backdrop" class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+
+    <!-- Panel: bottom sheet di mobile, dropdown di desktop -->
+    <div id="menu-panel"
+         class="absolute left-0 right-0 bottom-0
+                sm:left-auto sm:right-5 sm:top-20 sm:bottom-auto sm:w-80
+                bg-zinc-900 sm:bg-zinc-900/95 sm:backdrop-blur-xl
+                border-t sm:border border-zinc-800
+                rounded-t-[28px] sm:rounded-2xl
+                shadow-2xl shadow-black/60
+                max-h-[85vh] overflow-y-auto">
+
+      <!-- Drag handle (mobile only) -->
+      <div class="sm:hidden flex justify-center pt-3 pb-1">
+        <div class="w-10 h-1 rounded-full bg-zinc-700"></div>
+      </div>
+
+      <div class="py-2">
+
+        <!-- Menu header -->
+        <div class="px-5 py-2 text-[10px] font-semibold text-zinc-500 uppercase tracking-[0.2em]">
+          Navigasi
+        </div>
+
+        <!-- Toko -->
+        <a href="/toko" class="flex items-center gap-3.5 px-5 py-3.5 text-[14px] text-zinc-300 hover:bg-zinc-800/60 active:bg-zinc-800 transition-colors">
+          <div class="w-9 h-9 rounded-xl bg-zinc-800/60 flex items-center justify-center shrink-0">
+            <svg class="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+            </svg>
+          </div>
+          <span class="font-medium">Toko FStore</span>
+          <svg class="w-4 h-4 text-zinc-600 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </a>
+
+        <!-- Mail -->
+        <a href="/" class="flex items-center gap-3.5 px-5 py-3.5 text-[14px] text-zinc-300 hover:bg-zinc-800/60 active:bg-zinc-800 transition-colors">
+          <div class="w-9 h-9 rounded-xl bg-zinc-800/60 flex items-center justify-center shrink-0">
+            <svg class="w-4 h-4 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <span class="font-medium">FStore Mail</span>
+          <svg class="w-4 h-4 text-zinc-600 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </a>
+
+        <!-- Divider -->
+        <div class="px-5 mt-3 mb-1">
+          <span class="text-[10px] font-semibold text-zinc-500 uppercase tracking-[0.2em]">Sosial Media</span>
+        </div>
+
+        <!-- WhatsApp -->
+        <a href="https://wa.me/6285133334542" target="_blank" rel="noopener noreferrer"
+           class="flex items-center gap-3.5 px-5 py-3.5 text-[14px] text-zinc-300 hover:bg-zinc-800/60 active:bg-zinc-800 transition-colors">
+          <div class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
+            <svg class="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+            </svg>
+          </div>
+          <span class="font-medium">WhatsApp</span>
+          <svg class="w-4 h-4 text-zinc-600 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </a>
+
+        <!-- Twitter -->
+        <a href="https://x.com/F_StoreOfficial" target="_blank" rel="noopener noreferrer"
+           class="flex items-center gap-3.5 px-5 py-3.5 text-[14px] text-zinc-300 hover:bg-zinc-800/60 active:bg-zinc-800 transition-colors">
+          <div class="w-9 h-9 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center shrink-0">
+            <svg class="w-4 h-4 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z" />
+            </svg>
+          </div>
+          <span class="font-medium">Twitter / X</span>
+          <svg class="w-4 h-4 text-zinc-600 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+          </svg>
+        </a>
+
+        <!-- Instagram (soon) -->
+        <div class="flex items-center gap-3.5 px-5 py-3.5 text-[14px] text-zinc-500 cursor-default">
+          <div class="w-9 h-9 rounded-xl bg-zinc-800/40 flex items-center justify-center shrink-0">
+            <svg class="w-4 h-4 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+              <circle cx="12" cy="12" r="3" />
+              <circle cx="18" cy="6" r="1" fill="currentColor" stroke="none" />
+            </svg>
+          </div>
+          <span>Instagram</span>
+          <span class="ml-auto text-[10px] font-medium text-zinc-500 bg-zinc-800/80 px-2 py-0.5 rounded-full">Soon</span>
+        </div>
+
+        <!-- Facebook (soon) -->
+        <div class="flex items-center gap-3.5 px-5 py-3.5 text-[14px] text-zinc-500 cursor-default">
+          <div class="w-9 h-9 rounded-xl bg-zinc-800/40 flex items-center justify-center shrink-0">
+            <svg class="w-4 h-4 text-zinc-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M18 2h-3a5 5 0 00-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 011-1h3z" />
+            </svg>
+          </div>
+          <span>Facebook</span>
+          <span class="ml-auto text-[10px] font-medium text-zinc-500 bg-zinc-800/80 px-2 py-0.5 rounded-full">Soon</span>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== TOAST ===================== -->
+  <div id="toast-container"
+       class="fixed top-4 left-0 right-0 z-[100] flex flex-col items-center gap-2 px-4 pointer-events-none"
+       style="padding-top: calc(env(safe-area-inset-top,0px) + 1rem);">
   </div>
 
   <script>
+    // ============================================================
+    // BASE32 & TOTP
+    // ============================================================
+    function normalizeSecret(str) {
+      return (str || '').replace(/\s+/g, '').toUpperCase();
+    }
+
     function isValidBase32(str) {
-      const base32Regex = /^[A-Z2-7]+=*$/i;
-      return base32Regex.test(str.replace(/\s+/g, ''));
+      return /^[A-Z2-7]+=*$/.test(normalizeSecret(str));
     }
 
     function base32ToBytes(base32) {
       const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
       let bits = "", bytes = [];
-      base32 = base32.replace(/=+$/, "").toUpperCase().replace(/\s+/g, "");
-      for (let char of base32) {
-        let val = alphabet.indexOf(char);
+      base32 = normalizeSecret(base32).replace(/=+$/, "");
+      for (const char of base32) {
+        const val = alphabet.indexOf(char);
         if (val < 0) continue;
         bits += val.toString(2).padStart(5, "0");
       }
@@ -304,36 +489,99 @@
       return new Uint8Array(bytes);
     }
 
+    let _lastSecret = null;
+    let _lastWindow = -1;
+    let _cachedCode = "------";
+
     async function generateTOTP(secret) {
-      if (!secret) return "------";
-      if (!isValidBase32(secret)) return "------";
+      if (!secret || !isValidBase32(secret)) return "------";
+      if (!crypto || !crypto.subtle) return "------";
+
+      const epoch = Math.floor(Date.now() / 1000);
+      const counter = Math.floor(epoch / 30);
+
+      if (secret === _lastSecret && counter === _lastWindow && _cachedCode !== "------") {
+        return _cachedCode;
+      }
+
       try {
-          const keyBytes = base32ToBytes(secret);
-          if (keyBytes.length === 0) return "------";
-          const epoch = Math.floor(Date.now() / 1000);
-          const counter = Math.floor(epoch / 30);
-          const buffer = new ArrayBuffer(8);
-          const view = new DataView(buffer);
-          view.setUint32(4, counter, false); 
-          const cryptoKey = await crypto.subtle.importKey("raw", keyBytes, { name: "HMAC", hash: "SHA-1" }, false, ["sign"]);
-          const hmac = new Uint8Array(await crypto.subtle.sign("HMAC", cryptoKey, buffer));
-          const offset = hmac[hmac.length - 1] & 0xf;
-          const code = (((hmac[offset] & 0x7f) << 24) | ((hmac[offset + 1] & 0xff) << 16) | ((hmac[offset + 2] & 0xff) << 8) | (hmac[offset + 3] & 0xff)) % 1000000;
-          return code.toString().padStart(6, "0");
-      } catch (e) { 
+        const keyBytes = base32ToBytes(secret);
+        if (keyBytes.length === 0) return "------";
+
+        const buffer = new ArrayBuffer(8);
+        const view = new DataView(buffer);
+        view.setUint32(4, counter, false);
+
+        const cryptoKey = await crypto.subtle.importKey(
+          "raw", keyBytes, { name: "HMAC", hash: "SHA-1" }, false, ["sign"]
+        );
+        const hmac = new Uint8Array(await crypto.subtle.sign("HMAC", cryptoKey, buffer));
+        const offset = hmac[hmac.length - 1] & 0xf;
+        const code = (
+          ((hmac[offset] & 0x7f) << 24) |
+          ((hmac[offset + 1] & 0xff) << 16) |
+          ((hmac[offset + 2] & 0xff) << 8) |
+          (hmac[offset + 3] & 0xff)
+        ) % 1000000;
+        const result = code.toString().padStart(6, "0");
+
+        _lastSecret = secret;
+        _lastWindow = counter;
+        _cachedCode = result;
+        return result;
+      } catch (e) {
         console.error("TOTP Error:", e);
-        return "------"; 
+        return "------";
       }
     }
 
+    function resetTotpCache() {
+      _lastSecret = null;
+      _lastWindow = -1;
+      _cachedCode = "------";
+    }
+
+    // ============================================================
+    // CLIPBOARD
+    // ============================================================
+    async function copyToClipboard(text) {
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(text);
+          return true;
+        }
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+        document.body.appendChild(ta);
+        ta.select();
+        ta.setSelectionRange(0, ta.value.length);
+        const ok = document.execCommand('copy');
+        ta.remove();
+        return ok;
+      } catch (e) {
+        console.error("Copy failed:", e);
+        return false;
+      }
+    }
+
+    // ============================================================
+    // DOM
+    // ============================================================
     const secretInput = document.getElementById("secret");
     const codeDisplay = document.getElementById("code");
     const timerSec = document.getElementById("timer-sec");
-    const progressBar = document.getElementById("progress-bar");
+    const progressRing = document.getElementById("progress-ring");
     const errorDiv = document.getElementById("secret-error");
     const errorIcon = document.getElementById("error-icon");
+    const copyFeedback = document.getElementById("copy-feedback");
 
-    function saveSecret(secret) { localStorage.setItem('wap_secret', secret); }
+    const RING_CIRCUMFERENCE = 2 * Math.PI * 46; // ≈ 289
+
+    function saveSecret(secret) {
+      try { localStorage.setItem('wap_secret', secret); } catch (e) {}
+    }
 
     function validateSecret(secret) {
       if (!secret) {
@@ -342,160 +590,168 @@
         secretInput.classList.remove('error');
         return true;
       }
-      const isValid = isValidBase32(secret);
-      if (!isValid) {
-        errorDiv.classList.remove('hidden');
-        errorIcon.classList.remove('hidden');
-        secretInput.classList.add('error');
-      } else {
-        errorDiv.classList.add('hidden');
-        errorIcon.classList.add('hidden');
-        secretInput.classList.remove('error');
-      }
-      return isValid;
+      const ok = isValidBase32(secret);
+      errorDiv.classList.toggle('hidden', ok);
+      errorIcon.classList.toggle('hidden', ok);
+      secretInput.classList.toggle('error', !ok);
+      return ok;
     }
+
+    let _codeAnimTimeout = null;
 
     async function updateCode() {
       const secret = secretInput.value.trim();
-      const isValid = validateSecret(secret);
-      let newCode;
-      if (!isValid && secret !== "") {
-        newCode = "------";
-      } else {
-        newCode = await generateTOTP(secret);
-      }
-      
-      if(codeDisplay.textContent.trim() !== newCode) {
-          codeDisplay.style.opacity = '0.5';
-          codeDisplay.style.transform = 'scale(0.95)';
-          setTimeout(() => {
-              codeDisplay.textContent = newCode;
-              codeDisplay.style.opacity = '1';
-              codeDisplay.style.transform = 'scale(1)';
-          }, 150);
+      const valid = validateSecret(secret);
+      const newCode = (!valid && secret !== "") ? "------" : await generateTOTP(secret);
+
+      if (codeDisplay.textContent.trim() !== newCode) {
+        if (_codeAnimTimeout) clearTimeout(_codeAnimTimeout);
+        codeDisplay.style.opacity = '0.4';
+        codeDisplay.style.transform = 'scale(0.96)';
+        _codeAnimTimeout = setTimeout(() => {
+          codeDisplay.textContent = newCode;
+          codeDisplay.style.opacity = '1';
+          codeDisplay.style.transform = 'scale(1)';
+          _codeAnimTimeout = null;
+        }, 150);
       }
 
       const epoch = Math.floor(Date.now() / 1000);
       const remain = 30 - (epoch % 30);
       timerSec.textContent = `${remain}s`;
-      const percentage = (remain / 30) * 100;
-      progressBar.style.width = `${percentage}%`;
-      
-      if (remain <= 5) {
-        progressBar.classList.remove("bg-white");
-        progressBar.classList.add("bg-red-500");
-        codeDisplay.classList.add("text-red-500");
-        codeDisplay.classList.remove("text-white");
-      } else {
-        progressBar.classList.add("bg-white");
-        progressBar.classList.remove("bg-red-500");
-        codeDisplay.classList.add("text-white");
-        codeDisplay.classList.remove("text-red-500");
-      }
+
+      // Ring progress
+      const ratio = remain / 30;
+      progressRing.style.strokeDashoffset = String(RING_CIRCUMFERENCE * (1 - ratio));
+
+      // Warning state
+      const isUrgent = remain <= 5;
+      progressRing.classList.toggle("stroke-red-500", isUrgent);
+      progressRing.classList.toggle("stroke-white", !isUrgent);
+      codeDisplay.classList.toggle("text-red-400", isUrgent);
+      codeDisplay.classList.toggle("text-white", !isUrgent);
     }
 
-    function copyCode() {
+    async function copyCode() {
       const code = codeDisplay.textContent.trim();
-      if (code && code !== "------") {
-        navigator.clipboard.writeText(code);
-        const feedback = document.getElementById('copy-feedback');
-        feedback.classList.remove('opacity-0', 'pointer-events-none');
-        setTimeout(() => {
-            feedback.classList.add('opacity-0', 'pointer-events-none');
-        }, 1500);
+      if (!code || code === "------") return;
+      const ok = await copyToClipboard(code);
+      if (ok) {
+        copyFeedback.classList.remove('opacity-0');
+        setTimeout(() => copyFeedback.classList.add('opacity-0'), 1100);
       }
     }
-    
+
     function showToast(message, duration = 3000) {
-        const container = document.getElementById('toast-container');
-        const toast = document.createElement('div');
-        toast.className = 'bg-zinc-700 text-white px-4 py-2 rounded-xl shadow-lg text-sm font-medium pointer-events-auto border border-zinc-600 toast-enter';
-        toast.textContent = message;
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'bg-zinc-900 border border-zinc-700 text-white px-4 py-2.5 rounded-2xl shadow-xl shadow-black/40 text-[13px] font-medium pointer-events-auto toast-enter max-w-[92vw] text-center backdrop-blur-xl';
+      toast.textContent = message;
+      container.appendChild(toast);
 
-        container.appendChild(toast);
-
-        setTimeout(() => {
-            toast.classList.remove('toast-enter');
-            toast.classList.add('toast-exit');
-            toast.addEventListener('animationend', () => {
-                toast.remove();
-            });
-        }, duration);
+      setTimeout(() => {
+        toast.classList.remove('toast-enter');
+        toast.classList.add('toast-exit');
+        toast.addEventListener('animationend', () => toast.remove());
+      }, duration);
     }
-    
-    function copyShareLink() {
-        const secret = secretInput.value.trim().replace(/\s/g, '').toUpperCase();
-        
-        if (!secret) {
-            showToast("⚠️ Masukkan Secret Key terlebih dahulu.", 3000);
-            return;
-        }
-        
-        if (!isValidBase32(secret)) {
-            showToast("⚠️ Secret Key tidak valid. Periksa kembali.", 3000);
-            return;
-        }
-        
-        const url = `${window.location.origin}${window.location.pathname}?key=${secret}`;
-        navigator.clipboard.writeText(url).then(() => {
-            showToast("✅ Share Link berhasil disalin!", 3000);
-        }).catch(err => {
-            showToast("❌ Gagal menyalin link. Pastikan browser mengizinkan akses clipboard.", 5000);
-        });
+
+    async function copyShareLink() {
+      const secret = normalizeSecret(secretInput.value);
+      if (!secret) { showToast("⚠️ Masukkan Secret Key terlebih dahulu"); return; }
+      if (!isValidBase32(secret)) { showToast("⚠️ Secret Key tidak valid"); return; }
+
+      const url = `${window.location.origin}${window.location.pathname}?key=${encodeURIComponent(secret)}`;
+      const ok = await copyToClipboard(url);
+      showToast(ok ? "✅ Link berhasil disalin" : "❌ Gagal menyalin link", ok ? 2500 : 4500);
     }
 
     function clearSecret() {
-        secretInput.value = '';
-        saveSecret('');
-        validateSecret('');
-        updateCode();
-        showToast("🧹 Secret dihapus", 2000);
+      secretInput.value = '';
+      saveSecret('');
+      validateSecret('');
+      resetTotpCache();
+      updateCode();
+      showToast("🧹 Secret dihapus", 1800);
     }
 
-    // Hamburger menu toggle
+    // ============================================================
+    // MENU
+    // ============================================================
     const menuBtn = document.getElementById('menu-btn');
-    const menuDropdown = document.getElementById('menu-dropdown');
+    const menuOverlay = document.getElementById('menu-overlay');
+    const menuBackdrop = document.getElementById('menu-backdrop');
+
+    function openMenu() {
+      menuOverlay.classList.remove('hidden');
+      requestAnimationFrame(() => {
+        menuOverlay.dataset.open = 'true';
+      });
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeMenu() {
+      menuOverlay.dataset.open = 'false';
+      document.body.style.overflow = '';
+      setTimeout(() => menuOverlay.classList.add('hidden'), 350);
+    }
 
     menuBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      menuDropdown.classList.toggle('hidden');
-      if (!menuDropdown.classList.contains('hidden')) {
-        menuDropdown.classList.add('menu-enter');
-      } else {
-        menuDropdown.classList.remove('menu-enter');
-      }
+      if (menuOverlay.dataset.open === 'true') closeMenu();
+      else openMenu();
     });
 
-    // Close menu when clicking outside
-    document.addEventListener('click', (e) => {
-      if (!menuBtn.contains(e.target) && !menuDropdown.contains(e.target)) {
-        menuDropdown.classList.add('hidden');
-        menuDropdown.classList.remove('menu-enter');
-      }
+    menuBackdrop.addEventListener('click', closeMenu);
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && menuOverlay.dataset.open === 'true') closeMenu();
     });
 
+    // ============================================================
+    // INIT
+    // ============================================================
     window.addEventListener('load', () => {
+      if (!window.isSecureContext || !crypto || !crypto.subtle) {
+        showToast("⚠️ Halaman harus via HTTPS agar kode 2FA bisa dibuat", 6000);
+      }
+
       const params = new URLSearchParams(window.location.search);
       const urlKey = params.get('key');
-      const storedKey = localStorage.getItem('wap_secret');
+      let storedKey = null;
+      try { storedKey = localStorage.getItem('wap_secret'); } catch (e) {}
 
       if (urlKey) {
-          const rawKey = urlKey.replace(/\s/g, '').toUpperCase();
-          secretInput.value = rawKey;
-          saveSecret(rawKey);
-          window.history.replaceState({}, document.title, window.location.pathname);
+        const rawKey = normalizeSecret(urlKey);
+        secretInput.value = rawKey;
+        saveSecret(rawKey);
+        resetTotpCache();
+        window.history.replaceState({}, document.title, window.location.pathname);
       } else if (storedKey) {
-          secretInput.value = storedKey;
+        secretInput.value = storedKey;
       }
 
       updateCode();
       setInterval(updateCode, 1000);
 
       secretInput.addEventListener('input', () => {
-          const secret = secretInput.value.trim();
-          saveSecret(secret);
-          validateSecret(secret);
-          updateCode();
+        const secret = secretInput.value.trim();
+        saveSecret(secret);
+        validateSecret(secret);
+        resetTotpCache();
+        updateCode();
+      });
+
+      secretInput.addEventListener('paste', (e) => {
+        const text = (e.clipboardData || window.clipboardData).getData('text');
+        if (!text) return;
+        e.preventDefault();
+        const normalized = normalizeSecret(text);
+        secretInput.value = normalized;
+        saveSecret(normalized);
+        validateSecret(normalized);
+        resetTotpCache();
+        updateCode();
       });
     });
   </script>
